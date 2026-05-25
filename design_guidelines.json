@@ -1,0 +1,104 @@
+{
+  "project_name": "ThreadComb",
+  "theme": "Light",
+  "archetype": "1 (Organic & Earthy)",
+  "vibe": "Premium, modern, distinctive, high-trust, and confidence-inspiring",
+  "file_extensions": ".js and .jsx",
+  "design_tokens": {
+    "colors": {
+      "background": "40 25% 95%",
+      "foreground": "168 45% 9%",
+      "primary": "168 48% 17%",
+      "primary-foreground": "0 0% 100%",
+      "card": "0 0% 100%",
+      "card-foreground": "168 45% 9%",
+      "popover": "0 0% 100%",
+      "popover-foreground": "168 45% 9%",
+      "secondary": "40 15% 90%",
+      "secondary-foreground": "168 48% 17%",
+      "muted": "40 15% 90%",
+      "muted-foreground": "168 15% 45%",
+      "border": "168 10% 85%",
+      "input": "168 10% 85%",
+      "ring": "168 48% 17%",
+      "accent": "135 25% 92%",
+      "accent-foreground": "140 50% 25%",
+      "destructive": "10 55% 52%",
+      "destructive-foreground": "0 0% 100%",
+      "terracotta": "10 55% 52%",
+      "ochre": "35 65% 55%"
+    },
+    "typography": {
+      "heading_font": "Outfit",
+      "body_font": "Figtree",
+      "hierarchy": {
+        "h1": "text-4xl sm:text-5xl tracking-tight font-medium text-foreground leading-none",
+        "h2": "text-2xl sm:text-3xl tracking-tight font-medium text-foreground",
+        "h3": "text-xl sm:text-2xl font-medium text-foreground",
+        "body": "text-base leading-relaxed text-muted-foreground",
+        "small": "text-sm text-muted-foreground tracking-wide uppercase",
+        "label": "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+      },
+      "rules": "Never center headings by default. Use 'Outfit' for all headings and 'Figtree' for body text. Do not use 'Inter' or 'Roboto'. Line-height must be tight for headings."
+    },
+    "spacing_and_layout": {
+      "bento_grid": "Generous spacing. Use p-8 or p-12 for bento grid cards. Grid gaps should be gap-6 or gap-8.",
+      "border_radius": "rounded-xl for cards, rounded-lg for buttons and inputs. Do not go overly soft.",
+      "shadows": "shadow-sm for flat surfaces, shadow-[0_8px_32px_rgba(13,35,30,0.06)] for elevated cards. Use 1px subtle borders (border-border/40) for structure.",
+      "optical_alignment": "Align elements visually, prioritizing negative space and breathing room."
+    },
+    "animation": {
+      "hover": "Subtle background shifts or border color changes. e.g., hover:-translate-y-1 hover:shadow-lg transition-all duration-300 ease-in-out.",
+      "entrance": "Staggered fade-in-up for lists and grid items. Use framer-motion.",
+      "interactive": "Active states must have clear visual feedback without jarring layout shifts."
+    }
+  },
+  "icons": {
+    "library": "lucide-react",
+    "instructions": "Use lucide-react. NO emojis. Provide distinct, elegant outline icons."
+  },
+  "media": {
+    "logo_url": "https://static.prod-images.emergentagent.com/jobs/eb92aaff-7abc-4ef8-ad7e-aad3f7c54adb/images/fd16ed16efc907baecf933fe617214427063cef2737dd2cc0e7d99b7695087c4.png",
+    "onboarding_abstract_bg": "https://static.prod-images.emergentagent.com/jobs/eb92aaff-7abc-4ef8-ad7e-aad3f7c54adb/images/c2dad854e785660d7b6b3389bc6acd1a473098aa66620d16f28fe7c352e04ebd.png",
+    "creator_avatar": "https://images.unsplash.com/photo-1598966739654-5e9a252d8c32?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA0MTJ8MHwxfHNlYXJjaHwyfHxpbmRpYW4lMjBjb250ZW50JTIwY3JlYXRvciUyMHBvcnRyYWl0JTIwc21pbGluZ3xlbnwwfHx8fDE3Nzk3NDYwMjJ8MA&ixlib=rb-4.1.0&q=85",
+    "instructions": "Always use provided media URLs. Do not use placeholder services."
+  },
+  "pages": {
+    "/login": {
+      "layout": "Split screen layout (grid md:grid-cols-2). Left pane: Content centered vertically, brand logo top left, headline 'Every brand deal lives in a thread. ThreadComb reads them all.', and Google Sign-in button. Right pane: the 'onboarding_abstract_bg' image with a subtle dark overlay if needed, covering the full height.",
+      "components": ["Shadcn Button for Google Sign-in (use lucide-react Google-like icon or generic mail icon)"],
+      "data_testids": ["login-page-container", "login-google-btn", "login-title", "login-logo"]
+    },
+    "/onboarding/step-1-platform": {
+      "layout": "Centered wizard container. Top: Progress indicator (Step 1 of 4). Title: 'Where do your threads live?'. Content: 3 large Bento-style Cards (Instagram, YouTube, Both).",
+      "interactions": "Cards should have a subtle border (border-border) that turns to solid primary color on selection or hover. Use lucide icons for platforms.",
+      "data_testids": ["onboarding-step-1", "platform-card-instagram", "platform-card-youtube", "platform-card-both", "step-1-next-btn"]
+    },
+    "/onboarding/step-2-niche": {
+      "layout": "Centered wizard container. Progress (Step 2 of 4). Title: 'What is your creative DNA?'. Content: Grid (grid-cols-2 sm:grid-cols-3 md:grid-cols-4) of 12 selectable niche pills/cards.",
+      "niches": ["Beauty", "Gaming", "Education", "Finance", "Fashion", "Food", "Tech", "Sports", "ASMR", "Wellness", "PR/Gifting", "Politics"],
+      "interactions": "First selected is Primary (highlighted distinctively, e.g., solid bg), next 1-2 are Secondary (outlined with primary color).",
+      "data_testids": ["onboarding-step-2", "niche-grid", "niche-item-beauty", "niche-item-gaming", "niche-item-finance", "step-2-next-btn"]
+    },
+    "/onboarding/step-3-profile": {
+      "layout": "Centered wizard container. Progress (Step 3 of 4). Title: 'Weave your profile'. Form layout in a clean card (p-8).",
+      "fields": "Input for Handle. Select dropdowns for Follower count, Geography, and Language. Use Shadcn Form, Input, and Select components.",
+      "data_testids": ["onboarding-step-3", "profile-handle-input", "profile-followers-select", "profile-geo-select", "profile-lang-select", "step-3-next-btn"]
+    },
+    "/onboarding/step-4-connect": {
+      "layout": "Centered wizard container (wider max-w-3xl). Progress (Step 4 of 4). Title: 'Authorize your ThreadComb'. Subtitle focusing on Trust.",
+      "content": "Bento Grid layout for 3 sections. Section A: 'What ThreadComb will read' (background accent-green-bg, text accent-green-text, subtle check icons). Section B: 'What ThreadComb will NEVER read' (background accent-red-bg, text accent-red-text, cross/shield icons). Section C: 'Your data is protected' (minimalist checklist). Bottom: Large 'Connect Gmail' primary button.",
+      "data_testids": ["onboarding-step-4", "trust-will-read-card", "trust-never-read-card", "data-protection-list", "connect-gmail-btn"]
+    },
+    "/dashboard": {
+      "layout": "Full screen layout. Left: Sidebar Navigation (fixed, minimal). Top: Header (Logo left, Creator Avatar right). Center: Main content area.",
+      "sidebar_links": ["Dashboard", "Deals", "Invoices", "Reports", "Settings"],
+      "content": "Empty State only. Centered card (max-w-xl p-12 text-center) displaying the message: 'We're getting ready to read your threads...'. Disabled primary CTA button 'Start Your Audit'.",
+      "data_testids": ["dashboard-layout", "sidebar-nav", "sidebar-link-dashboard", "header-avatar", "empty-state-card", "start-audit-btn-disabled"]
+    }
+  },
+  "component_instructions": {
+    "shadcn_ui": "Install and use shadcn/ui components for Buttons, Forms, Inputs, Selects, and Cards. Heavily customize their styles (especially border-radius, shadows, and padding) to match the Organic & Earthy archetype. Do NOT use default Vercel/Stripe styles. Customize standard Card to remove default heavy borders unless intentional.",
+    "icons": "Use lucide-react. Replace any default emojis with elegant SVGs."
+  }
+}
