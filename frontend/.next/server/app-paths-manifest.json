@@ -1,0 +1,8 @@
+{
+  "/login/page": "app/login/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/onboarding/step-1-platform/page": "app/onboarding/step-1-platform/page.js",
+  "/onboarding/step-2-niche/page": "app/onboarding/step-2-niche/page.js",
+  "/onboarding/step-3-profile/page": "app/onboarding/step-3-profile/page.js",
+  "/onboarding/step-4-connect/page": "app/onboarding/step-4-connect/page.js"
+}
