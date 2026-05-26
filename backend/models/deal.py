@@ -241,28 +241,9 @@ class SkillsMapNode(BaseModel):
 # ============================================================================
 # Agent Actions (immutable audit log)
 # ============================================================================
-
-
-class AgentActionType(str, Enum):
-    INGESTION_STARTED = "ingestion_started"
-    INGESTION_COMPLETE = "ingestion_complete"
-    EXTRACTION_FAILED = "extraction_failed"
-    DRAFT_GENERATED = "draft_generated"
-    EMAIL_SENT = "email_sent"
-    EMAIL_REJECTED = "email_rejected"
-    INVOICE_UPDATED = "invoice_updated"
-    REPORT_GENERATED = "report_generated"
-    CALENDAR_EVENT_CREATED = "calendar_event_created"
-    HITL_QUEUED = "hitl_queued"
-    HITL_RESOLVED = "hitl_resolved"
-
-
-class ActionResult(str, Enum):
-    SUCCESS = "success"
-    FAILED = "failed"
-    SKIPPED = "skipped"
-    PENDING_APPROVAL = "pending_approval"
-    PENDING_HITL = "pending_hitl"
+# AgentActionType / ActionResult moved to models/common.py in Session 2B.
+# Re-export here so existing imports `from models.deal import ...` keep working.
+from models.common import AgentActionType, ActionResult  # noqa: E402,F401
 
 
 class AgentAction(BaseModel):

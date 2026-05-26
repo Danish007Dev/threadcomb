@@ -34,6 +34,10 @@ class Settings:
         "CLOUD_TASKS_QUEUE_NAME", "threadcomb-ingestion"
     )
 
+    # Cloud Tasks worker (Session 2B+)
+    WORKER_BASE_URL: str = os.environ.get("WORKER_BASE_URL", "")
+    WORKER_SECRET: str = os.environ.get("WORKER_SECRET", "")
+
     # Emergent Auth
     EMERGENT_AUTH_BASE: str = "https://demobackend.emergentagent.com/auth/v1/env/oauth"
 

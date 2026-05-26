@@ -98,3 +98,27 @@ def get_action_policy(
         "can_execute": not needs_approval and not needs_hitl,
         "confidence": confidence,
     }
+
+
+# ============================================================================
+# Named architectural exceptions
+# ============================================================================
+# When a documented exception to a non-negotiable principle is required, it
+# lives here — not buried in a code comment. Future reviewers find it by
+# grep'ing NAMED_EXCEPTIONS.
+NAMED_EXCEPTIONS = {
+    "CLOUD_TASKS_SANITISED_TEXT_TRANSIT": {
+        "description": (
+            "Sanitised email text passes through the Cloud Tasks payload as a "
+            "temporary transit medium. This is an explicit exception to "
+            "Principle 3 (no email text in persistent storage). "
+            "Justification: Cloud Tasks encrypts payloads at rest and in transit. "
+            "Tasks execute immediately — they are not long-term storage. "
+            "Text is sanitised (PII redacted, signatures stripped), not raw email. "
+            "The HITL reviewer never sees this text — only subject and sender_email "
+            "are stored in agent_actions for low-confidence threads."
+        ),
+        "approved_by": "architecture_review",
+        "date": "2026-05",
+    },
+}

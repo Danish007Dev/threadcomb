@@ -52,6 +52,16 @@ def get_db() -> AsyncIOMotorDatabase:
     return MongoDBSingleton.get_db()
 
 
+def get_db_singleton() -> AsyncIOMotorDatabase:
+    """Application-scoped Motor database for background tasks and workers.
+
+    Use this in background tasks and Cloud Tasks workers — NOT in request handlers
+    that already use Depends(get_db). Background tasks must not depend on
+    request-scoped resources because the request may complete before the task runs.
+    """
+    return MongoDBSingleton.get_db()
+
+
 async def ensure_collections(db: AsyncIOMotorDatabase) -> None:
     """Create any missing collections (MongoDB lazy-creates on write, but we want
     them visible from day one so Atlas UI shows all 10)."""
@@ -102,6 +112,11 @@ async def create_indexes(db: AsyncIOMotorDatabase) -> None:
     await db.niche_graph.create_index(
         [("niche", 1), ("follower_tier", 1), ("content_format", 1)]
     )
+
+    # ingestion_jobs (Session 2B)
+    await db.ingestion_jobs.create_index("creator_id")
+    await db.ingestion_jobs.create_index([("creator_id", 1), ("status", 1)])
+    await db.ingestion_jobs.create_index("created_at")
 
     # response_templates
     await db.response_templates.create_index("creator_id")
