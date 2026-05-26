@@ -45,6 +45,11 @@ from models.deal import (  # noqa: F401
     FanProfilePlaceholder,
     ResponseTemplate,
     NicheGraphNode,
-    RateDistribution,
 )
 from models.contract import ContractExtraction, ContractClause  # noqa: F401
+from models.corpus import (  # noqa: F401
+    PublicDataExtraction,
+    RateBenchmarkExtraction,
+    BrandSignalExtraction,
+    ClauseExtraction,
+)

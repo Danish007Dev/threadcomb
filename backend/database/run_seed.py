@@ -1,17 +1,18 @@
 #!/usr/bin/env python
-"""Standalone executable: create all ThreadComb collections, indexes, and seed data.
+"""Standalone executable: migrate, create collections, create indexes.
 
 Usage:
     python backend/database/run_seed.py
 
 This script:
-  1. Connects to MongoDB Atlas using MONGODB_URI / MONGO_URL env var
+  1. Runs schema migration (deletes invalid Session 1 niche_graph placeholders)
   2. Creates all 10 collections if they don't exist
   3. Creates all indexes defined in create_indexes()
-  4. Inserts the niche_graph seed data from seed_niche_graph()
-  5. Prints a confirmation for each step
+  4. Prints a verification summary
 
-Run once after Session 1.
+niche_graph is NO LONGER seeded with hardcoded data. Run the corpus pipeline
+instead:
+    python backend/corpus/ingest.py --folder ./corpus/data/
 """
 
 import asyncio
@@ -37,18 +38,19 @@ from database.mongodb import (  # noqa: E402
     create_indexes,
     COLLECTION_NAMES,
 )
-from database.seed import seed_niche_graph  # noqa: E402
+from database.migrate import migrate_niche_graph_v2  # noqa: E402
+
+
+EXPECTED_COLLECTIONS = COLLECTION_NAMES
 
 
 async def main() -> int:
     print("=" * 70)
-    print("ThreadComb — Database Setup")
+    print("ThreadComb Database Setup")
     print("=" * 70)
 
     db = MongoDBSingleton.get_db()
     print(f"\n[1/4] Connected to MongoDB database: {db.name}")
-
-    # Ping
     try:
         await db.command("ping")
         print("       Ping OK.")
@@ -56,24 +58,35 @@ async def main() -> int:
         print(f"       Ping FAILED: {exc}")
         return 1
 
-    print("\n[2/4] Ensuring collections exist...")
+    # ── Step 1: Migration ──
+    print("\n[2/4] Running schema migration (Session 2A — niche_graph v2)...")
+    deleted = await migrate_niche_graph_v2(db)
+    print(f"       Removed {deleted} invalid placeholder documents.")
+
+    # ── Step 2: Collections + Indexes ──
+    print("\n[3/4] Ensuring collections + indexes...")
     await ensure_collections(db)
-    final_collections = await db.list_collection_names()
-    for name in COLLECTION_NAMES:
-        present = "OK " if name in final_collections else "MISSING"
-        print(f"       [{present}] {name}")
-
-    print("\n[3/4] Creating indexes...")
     await create_indexes(db)
-    print("       All indexes ensured.")
+    final_collections = await db.list_collection_names()
+    for name in EXPECTED_COLLECTIONS:
+        marker = "OK " if name in final_collections else "MISSING"
+        print(f"       [{marker}] {name}")
 
-    print("\n[4/4] Seeding niche_graph...")
-    inserted = await seed_niche_graph(db)
-    if inserted > 0:
-        print(f"       Inserted {inserted} pre-training niche_graph documents.")
-    else:
-        existing = await db.niche_graph.count_documents({})
-        print(f"       niche_graph already has {existing} documents — skipped.")
+    # ── Step 3: Verification (no seed) ──
+    print("\n[4/4] Verification:")
+    for name in EXPECTED_COLLECTIONS:
+        count = await db[name].count_documents({})
+        print(f"       ✓ {name}: {count} documents")
+
+    valid_niche = await db.niche_graph.count_documents(
+        {"confidence_weight": {"$gte": 0.40}}
+    )
+    print(f"\n       niche_graph valid docs (confidence_weight ≥ 0.40): {valid_niche}")
+    if valid_niche == 0:
+        print(
+            "\n   → niche_graph is empty. Populate it by running:\n"
+            "       python backend/corpus/ingest.py --folder ./corpus/data/"
+        )
 
     print("\n" + "=" * 70)
     print("ThreadComb DB setup COMPLETE.")

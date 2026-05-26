@@ -318,33 +318,6 @@ class ResponseTemplate(BaseModel):
 # ============================================================================
 # Niche Graph (Layer 2 — anonymised intelligence)
 # ============================================================================
-
-
-class RateDistribution(BaseModel):
-    p10: Optional[float] = None
-    p25: Optional[float] = None
-    p50: Optional[float] = None
-    p75: Optional[float] = None
-    p90: Optional[float] = None
-    sample_size: int = 0
-    confidence: float = 0.3
-
-
-class NicheGraphNode(BaseModel):
-    niche: str
-    follower_tier: str
-    geography: str = "IN"
-    content_format: str
-    period: str
-    rate_distribution: RateDistribution = Field(default_factory=RateDistribution)
-    brand_patterns: dict = Field(default_factory=dict)
-    clause_risk_index: List[dict] = Field(default_factory=list)
-    creator_count_contributing: int = 0
-    data_source: str = "pre_training"
-    last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    data_classification: DataClassification = Field(
-        default_factory=lambda: DataClassification(
-            tier=DataClassificationTier.AGGREGATE,
-            anonymisation_eligible=True,
-        )
-    )
+# NicheGraphNode lives in models/niche_graph.py as of Session 2A.
+# Re-exported here for backwards-compatible imports.
+from models.niche_graph import NicheGraphNode  # noqa: E402,F401

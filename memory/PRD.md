@@ -51,6 +51,34 @@ Built the foundation:
 - Premium UI: Outfit/Figtree fonts, organic earthy palette, lucide icons (no emojis)
 - 22/22 backend pytest tests pass; all 7 frontend pages verified
 
+## Session 2A — DONE (2026-05-26)
+
+Fixed Session 1 placeholder seed data and added corpus ingestion pipeline:
+- **Replaced** `NicheGraphNode` schema. New `backend/models/niche_graph.py` has:
+  `confidence_weight`, `corroboration_score`, `corroboration_sources`,
+  `source_type`, `source_file`, `observation_period`, `flagged_for_review`,
+  `outlier_reason`, flat `rate_p25/p50/p75` (no more nested `rate_distribution`).
+- **Deleted** all 10 Session 1 placeholders via `backend/database/migrate.py`
+  (`migrate_niche_graph_v2` — idempotent, protects `creator_contributed` data).
+- **Removed hardcoded seed** — `seed_niche_graph()` is now a no-op. `run_seed.py`
+  runs the migration first and instructs the user to populate via corpus.
+- **New** `backend/models/corpus.py` — `PublicDataExtraction`,
+  `RateBenchmarkExtraction`, `BrandSignalExtraction`, `ClauseExtraction`.
+- **New** `backend/corpus/ingest.py` — standalone CLI:
+  `python backend/corpus/ingest.py --folder ./corpus/data/ [--dry-run] [--niche X]`
+  using **Gemini 2.5 Flash via emergentintegrations + EMERGENT_LLM_KEY**.
+  Sequential extraction, weighted cross-validation (no numpy), σ-based outlier flags.
+- **Confidence formula** verified: `compute_confidence_weight(0.33)=0.55`,
+  `(0.67)=0.70`, `(1.0)=0.85`. Minimum floor 0.40.
+- **Brand signals** route to `brands` collection (case-insensitive upsert on name),
+  rate benchmarks route to `niche_graph` (composite upsert key:
+  niche/follower_tier/content_format/source_file). Both **idempotent**.
+- **Folder structure** at `/app/corpus/data/{industry_reports,contract_templates,
+  public_media_kits,brand_signals,disclosure_data}/` with `.gitkeep`. Raw data
+  files are gitignored.
+- Verified end-to-end with a real Gemini call: 1 rate + 1 brand extracted from
+  a test file, both correctly written + idempotent on re-run, then cleaned.
+
 ## Prioritized Backlog
 
 ### P0 — Session 2 (Gmail OAuth real)
