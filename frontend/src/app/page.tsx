@@ -2,11 +2,10 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getMe } from '@/lib/api';
+import { getMe } from '../lib/api';
 
 /**
  * Root entry. Decides where the user lands:
- *  - URL contains #session_id=... -> route to /auth/callback (handles exchange)
  *  - Has valid session_token cookie -> /dashboard or onboarding step they're on
  *  - Otherwise -> /login
  */
@@ -14,13 +13,6 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // CRITICAL: If returning from OAuth callback, do NOT call /auth/me — let
-    // the callback page exchange the session_id first.
-    if (typeof window !== 'undefined' && window.location.hash?.includes('session_id=')) {
-      router.replace(`/auth/callback${window.location.hash}`);
-      return;
-    }
-
     let cancelled = false;
     (async () => {
       try {

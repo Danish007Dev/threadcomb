@@ -5,21 +5,21 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '../../../components/ui/select';
 
-import { StepIndicator } from '@/components/onboarding/StepIndicator';
-import { useOnboarding } from '@/store/onboarding';
-import { patchStep3 } from '@/lib/api';
-import type { FollowerBucket } from '@/lib/types';
+import { StepIndicator } from '../../../components/onboarding/StepIndicator';
+import { useOnboarding } from '../../../store/onboarding';
+import { patchStep3 } from '../../../lib/api';
+import type { FollowerBucket } from '../../../lib/types';
 
 const FOLLOWER_OPTIONS: Array<{ value: FollowerBucket; label: string }> = [
   { value: 'under_10k', label: 'Under 10K' },

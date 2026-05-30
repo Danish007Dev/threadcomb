@@ -20,12 +20,12 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { StepIndicator } from '@/components/onboarding/StepIndicator';
-import { useOnboarding } from '@/store/onboarding';
-import { patchStep2 } from '@/lib/api';
-import type { Niche } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { Button } from '../../../components/ui/button';
+import { StepIndicator } from '../../../components/onboarding/StepIndicator';
+import { useOnboarding } from '../../../store/onboarding';
+import { patchStep2 } from '../../../lib/api';
+import type { Niche } from '../../../lib/types';
+import { cn } from '../../../lib/utils';
 
 const NICHES: Array<{ id: Niche; label: string; Icon: React.ComponentType<{ className?: string }>; testId: string }> = [
   { id: 'beauty', label: 'Beauty', Icon: Brush, testId: 'niche-item-beauty' },

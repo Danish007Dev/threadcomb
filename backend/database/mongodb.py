@@ -80,7 +80,7 @@ async def create_indexes(db: AsyncIOMotorDatabase) -> None:
     await db.creators.create_index("email", unique=True)
     await db.creators.create_index("niche")
 
-    # creator_sessions (for Emergent Auth)
+    # creator_sessions (for Google OAuth app sessions)
     await db.creator_sessions.create_index("session_token", unique=True)
     await db.creator_sessions.create_index("creator_id")
 

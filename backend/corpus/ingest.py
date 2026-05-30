@@ -2,8 +2,7 @@
 =====================================
 
 Reads structured documents from a local folder, extracts signals via Gemini
-2.5 Flash (called through the Emergent Universal LLM key + emergentintegrations
-library), cross-validates, and writes results to MongoDB.
+2.5 Flash, cross-validates, and writes results to MongoDB.
 
 Usage:
     python backend/corpus/ingest.py --folder ./corpus/data/
@@ -22,7 +21,6 @@ import os
 import re
 import statistics
 import sys
-import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,9 +42,7 @@ if not os.environ.get("DB_NAME") and os.environ.get("MONGODB_DB_NAME"):
 
 from config import settings  # noqa: E402
 from models.corpus import PublicDataExtraction  # noqa: E402
-
-# Emergent LLM client (works for Gemini, OpenAI, Claude via the universal key)
-from emergentintegrations.llm.chat import LlmChat, UserMessage  # noqa: E402
+from services.gemini_client import gemini_client  # noqa: E402
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -57,7 +53,6 @@ logger = logging.getLogger("threadcomb.corpus")
 # ─── Constants ───────────────────────────────────────────────────────────────
 SUPPORTED_EXTENSIONS = {".pdf", ".txt", ".md", ".csv", ".json"}
 EXTRACTION_MODEL = "gemini-2.5-flash"
-EXTRACTION_PROVIDER = "gemini"
 MAX_CHARS_PER_DOCUMENT = 80_000
 
 SOURCE_TYPE_FOLDER_MAP = {
@@ -207,15 +202,12 @@ async def extract_from_document(
         f"Return ONLY the JSON object. No markdown, no prose."
     )
 
-    # New chat per document so each call is stateless.
-    chat = LlmChat(
-        api_key=api_key,
-        session_id=f"corpus-{file_path.stem}-{uuid.uuid4().hex[:8]}",
-        system_message=EXTRACTION_SYSTEM_PROMPT,
-    ).with_model(EXTRACTION_PROVIDER, EXTRACTION_MODEL)
-
     try:
-        response_text = await chat.send_message(UserMessage(text=user_prompt))
+        response_text = await gemini_client.send_text(
+            system_message=EXTRACTION_SYSTEM_PROMPT,
+            user_message=user_prompt,
+            model=EXTRACTION_MODEL,
+        )
     except Exception as exc:
         logger.error("Gemini call failed for %s: %s", file_path.name, exc)
         return None
@@ -613,11 +605,8 @@ def discover_files(folder_root: Path) -> List[Tuple[Path, str]]:
 async def run_ingestion(
     folder_path: Path, dry_run: bool, niche_filter: Optional[str]
 ) -> int:
-    api_key = settings.EMERGENT_LLM_KEY or settings.GEMINI_API_KEY
-    if not api_key:
-        logger.error(
-            "Neither EMERGENT_LLM_KEY nor GEMINI_API_KEY is set in backend/.env"
-        )
+    if not settings.GEMINI_API_KEY:
+        logger.error("GEMINI_API_KEY is not set in backend/.env")
         return 1
 
     client = AsyncIOMotorClient(settings.MONGO_URL)
@@ -640,13 +629,13 @@ async def run_ingestion(
         all_extractions: List[PublicDataExtraction] = []
         for file_path, source_type in file_with_types:
             logger.info("Processing: %s [%s]", file_path.name, source_type)
-            extraction = await extract_from_document(file_path, source_type, api_key)
+            extraction = await extract_from_document(file_path, source_type, settings.GEMINI_API_KEY)
             if extraction:
                 all_extractions.append(extraction)
 
         if not all_extractions:
             logger.error(
-                "No successful extractions. Check your files and the EMERGENT_LLM_KEY."
+                "No successful extractions. Check your files and the GEMINI_API_KEY."
             )
             return 1
 

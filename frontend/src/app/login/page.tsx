@@ -1,22 +1,20 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { ThreadCombLogo } from '@/components/brand/Logo';
+import { Button } from '../../components/ui/button';
+import { ThreadCombLogo } from '../../components/brand/Logo';
 import { LogIn, ShieldCheck, Sparkles, Inbox } from 'lucide-react';
+import { API_BASE } from '../../lib/api';
 
 /**
  * Login page — split layout: brand pitch on the left, abstract artwork on the right.
  *
- * REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS,
- * THIS BREAKS THE AUTH.
+ * Google OAuth login. The backend handles the code exchange and sets the
+ * session cookie before redirecting back to the app.
  */
 export default function LoginPage() {
   const handleLogin = () => {
-    // Derive return URL dynamically from the browser. Do NOT hardcode.
-    const redirectUrl = window.location.origin + '/auth/callback';
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(
-      redirectUrl
-    )}`;
+    const nextUrl = `${window.location.origin}/auth/callback`;
+    window.location.href = `${API_BASE}/auth/google/login?next=${encodeURIComponent(nextUrl)}`;
   };
 
   return (
@@ -93,16 +91,8 @@ export default function LoginPage() {
 
       {/* Right pane — abstract artwork */}
       <div className="relative hidden md:block overflow-hidden bg-primary tc-grain">
-        <div
-          className="absolute inset-0 opacity-90"
-          style={{
-            backgroundImage:
-              "url('https://static.prod-images.emergentagent.com/jobs/eb92aaff-7abc-4ef8-ad7e-aad3f7c54adb/images/c2dad854e785660d7b6b3389bc6acd1a473098aa66620d16f28fe7c352e04ebd.png')",
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-tr from-primary/40 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.16),transparent_22%),radial-gradient(circle_at_80%_70%,rgba(255,255,255,0.14),transparent_18%),linear-gradient(135deg,rgba(12,71,57,0.94),rgba(24,96,79,0.92))]" />
+        <div className="absolute inset-0 opacity-70 bg-[linear-gradient(120deg,transparent_0%,rgba(255,255,255,0.06)_50%,transparent_100%)]" />
         <div className="absolute bottom-10 left-10 right-10 text-primary-foreground">
           <p className="text-sm font-medium uppercase tracking-[0.18em] opacity-80">
             What you&apos;ll see first

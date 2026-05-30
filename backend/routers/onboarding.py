@@ -11,7 +11,6 @@ import logging
 
 from database.mongodb import get_db
 from services.mongodb_writer import update_with_classification
-from services.gmail_auth import store_refresh_token_stub
 from models.creator import (
     Step1Input,
     Step2Input,
@@ -122,16 +121,17 @@ async def step_3_profile(creator_id: str, payload: Step3Input):
 
 @router.post("/{creator_id}/gmail-connect")
 async def step_4_gmail_connect(creator_id: str):
-    """Session 1: mocked Gmail connect.
-
-    Marks gmail_connected=True, completes onboarding, starts pilot timer.
-    The real Gmail OAuth handshake ships in Session 2.
-    """
-    await _require_creator(creator_id)
+    """Complete onboarding once Gmail is connected via Google OAuth."""
+    creator = await _require_creator(creator_id)
     db = get_db()
     now = datetime.now(timezone.utc)
 
-    secret_path = await store_refresh_token_stub(creator_id, refresh_token="MOCKED")
+    secret_path = creator.get("gmail_secret_path")
+    if not secret_path:
+        raise HTTPException(
+            status_code=400,
+            detail="Connect Google from the login flow before completing onboarding.",
+        )
 
     await update_with_classification(
         db.creators,

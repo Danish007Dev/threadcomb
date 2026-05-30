@@ -7,7 +7,7 @@
  */
 
 import { create } from 'zustand';
-import type { Niche, Platform, FollowerBucket, Creator } from '@/lib/types';
+import type { Niche, Platform, FollowerBucket, Creator } from '../lib/types';
 
 interface OnboardingState {
   creator: Creator | null;

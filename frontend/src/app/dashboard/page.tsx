@@ -13,11 +13,11 @@ import {
   LogOut,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { ThreadCombLogo } from '@/components/brand/Logo';
-import { getMe, logout } from '@/lib/api';
-import type { Creator } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { Button } from '../../components/ui/button';
+import { ThreadCombLogo } from '../../components/brand/Logo';
+import { getMe, logout } from '../../lib/api';
+import type { Creator } from '../../lib/types';
+import { cn } from '../../lib/utils';
 
 const NAV = [
   { label: 'Dashboard', Icon: LayoutDashboard, href: '/dashboard', active: true, testId: 'sidebar-link-dashboard' },

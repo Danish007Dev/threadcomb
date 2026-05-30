@@ -1,9 +1,8 @@
 /**
  * ThreadComb API client.
  *
- * All API calls go through the public backend URL defined in env. NextAuth /
- * Emergent Auth session cookie is httpOnly, samesite=none, secure — so we
- * always include credentials.
+ * All API calls go through the public backend URL defined in env. We always
+ * include credentials so the Google OAuth session cookie is sent.
  */
 
 import type { Creator, Platform, Niche, FollowerBucket } from './types';
@@ -41,16 +40,6 @@ async function request<T>(
 }
 
 // ---------- Auth ----------
-
-export async function exchangeSession(sessionId: string): Promise<{
-  creator: Creator;
-  session_token: string;
-}> {
-  return request('/auth/session', {
-    method: 'POST',
-    body: JSON.stringify({ session_id: sessionId }),
-  });
-}
 
 export async function getMe(): Promise<Creator> {
   return request('/auth/me');

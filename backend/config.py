@@ -18,11 +18,17 @@ class Settings:
 
     # Gemini
     GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
-    EMERGENT_LLM_KEY: str = os.environ.get("EMERGENT_LLM_KEY", "")
 
-    # Gmail OAuth (placeholder, used in Session 2)
-    GMAIL_CLIENT_ID: str = os.environ.get("GMAIL_CLIENT_ID", "")
-    GMAIL_CLIENT_SECRET: str = os.environ.get("GMAIL_CLIENT_SECRET", "")
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = os.environ.get("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET: str = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+    GOOGLE_OAUTH_REDIRECT_URI: str = os.environ.get(
+        "GOOGLE_OAUTH_REDIRECT_URI", "http://localhost:8000/api/auth/google/callback"
+    )
+    FRONTEND_BASE_URL: str = os.environ.get("FRONTEND_BASE_URL", "http://localhost:3000")
+
+    # Gmail / OAuth scopes used for ingestion
+    GMAIL_TOKEN_DIR: str = os.environ.get("GMAIL_TOKEN_DIR", "backend/.secrets/gmail")
 
     # GCS
     GCS_BUCKET_NAME: str = os.environ.get("GCS_BUCKET_NAME", "threadcomb-reports")
@@ -37,9 +43,6 @@ class Settings:
     # Cloud Tasks worker (Session 2B+)
     WORKER_BASE_URL: str = os.environ.get("WORKER_BASE_URL", "")
     WORKER_SECRET: str = os.environ.get("WORKER_SECRET", "")
-
-    # Emergent Auth
-    EMERGENT_AUTH_BASE: str = "https://demobackend.emergentagent.com/auth/v1/env/oauth"
 
 
 settings = Settings()

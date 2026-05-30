@@ -13,10 +13,10 @@ import {
   ScrollText,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { StepIndicator } from '@/components/onboarding/StepIndicator';
-import { useOnboarding } from '@/store/onboarding';
-import { connectGmail } from '@/lib/api';
+import { Button } from '../../../components/ui/button';
+import { StepIndicator } from '../../../components/onboarding/StepIndicator';
+import { useOnboarding } from '../../../store/onboarding';
+import { connectGmail } from '../../../lib/api';
 
 const WILL_READ = [
   'Emails about brand deals, sponsorships, and partnerships',

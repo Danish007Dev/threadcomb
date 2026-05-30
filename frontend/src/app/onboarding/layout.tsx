@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getMe } from '@/lib/api';
-import { useOnboarding } from '@/store/onboarding';
-import { ThreadCombLogo } from '@/components/brand/Logo';
+import { getMe } from '../../lib/api';
+import { useOnboarding } from '../../store/onboarding';
+import { ThreadCombLogo } from '../../components/brand/Logo';
 
 export default function OnboardingLayout({
   children,

@@ -153,10 +153,6 @@
     "@babel/helper-string-parser" "^7.27.1"
     "@babel/helper-validator-identifier" "^7.28.5"
 
-"@emergentbase/visual-edits@https://assets.emergent.sh/npm/emergentbase-visual-edits-1.0.8.tgz":
-  version "1.0.8"
-  resolved "https://assets.emergent.sh/npm/emergentbase-visual-edits-1.0.8.tgz#92cfe0ada8724a048d1bdf2593a34bed202b5bd0"
-
 "@emnapi/runtime@^1.2.0":
   version "1.10.0"
   resolved "https://registry.yarnpkg.com/@emnapi/runtime/-/runtime-1.10.0.tgz#4b260c0d3534204e98c6110b8db1a987d26ec87c"

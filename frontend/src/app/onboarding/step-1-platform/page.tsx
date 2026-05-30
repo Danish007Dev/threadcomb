@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Instagram, Youtube, Layers, ArrowRight } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { StepIndicator } from '@/components/onboarding/StepIndicator';
-import { useOnboarding } from '@/store/onboarding';
-import { patchStep1 } from '@/lib/api';
-import type { Platform } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { Button } from '../../../components/ui/button';
+import { StepIndicator } from '../../../components/onboarding/StepIndicator';
+import { useOnboarding } from '../../../store/onboarding';
+import { patchStep1 } from '../../../lib/api';
+import type { Platform } from '../../../lib/types';
+import { cn } from '../../../lib/utils';
 
 const PLATFORMS: Array<{
   id: Platform;

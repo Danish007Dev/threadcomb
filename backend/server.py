@@ -3,7 +3,7 @@
 Wires up:
   - MongoDB collections + indexes at startup
   - niche_graph seed (idempotent — only seeds if empty)
-  - /api/auth/*       — Emergent Google auth + creator lifecycle
+    - /api/auth/*       — Google OAuth + creator lifecycle
   - /api/onboarding/* — 4-step creator onboarding
   - /api/health       — liveness + Mongo ping
 """
@@ -22,6 +22,9 @@ from database.seed import seed_niche_graph
 from routers import auth as auth_router
 from routers import onboarding as onboarding_router
 from routers import health as health_router
+from routers import ingestion as ingestion_router
+from routers import sse as sse_router
+from workers import process_thread as process_thread_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,6 +41,8 @@ api_router = APIRouter(prefix="/api")
 api_router.include_router(health_router.router)
 api_router.include_router(auth_router.router)
 api_router.include_router(onboarding_router.router)
+api_router.include_router(ingestion_router.router)
+api_router.include_router(sse_router.router)
 
 
 @api_router.get("/")
@@ -50,6 +55,7 @@ async def root():
 
 
 app.include_router(api_router)
+app.include_router(process_thread_router.router)
 
 app.add_middleware(
     CORSMiddleware,

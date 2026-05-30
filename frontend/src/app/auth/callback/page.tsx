@@ -3,18 +3,14 @@
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { exchangeSession } from '@/lib/api';
-import { ThreadCombLogo } from '@/components/brand/Logo';
+import { getMe } from '../../../lib/api';
+import { ThreadCombLogo } from '../../../components/brand/Logo';
 
 /**
- * AuthCallback — runs at /auth/callback after Emergent Auth redirect.
+ * AuthCallback — runs after Google OAuth redirect.
  *
- * REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS,
- * THIS BREAKS THE AUTH.
- *
- * Reads #session_id from the URL fragment, calls our backend /api/auth/session
- * (which exchanges it via Emergent's session-data endpoint), then routes to
- * the correct onboarding step or /dashboard.
+ * The backend has already set the session cookie, so this page only resolves
+ * the creator state and routes accordingly.
  */
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -24,21 +20,9 @@ export default function AuthCallbackPage() {
     if (hasProcessed.current) return;
     hasProcessed.current = true;
 
-    const hash = typeof window !== 'undefined' ? window.location.hash : '';
-    const match = hash.match(/session_id=([^&]+)/);
-    if (!match) {
-      router.replace('/login');
-      return;
-    }
-    const sessionId = decodeURIComponent(match[1]);
-
     (async () => {
       try {
-        const { creator } = await exchangeSession(sessionId);
-        // Clear the URL fragment for cleanliness
-        if (typeof window !== 'undefined') {
-          window.history.replaceState(null, '', '/auth/callback');
-        }
+        const creator = await getMe();
         const step = creator.onboarding_step ?? 0;
         if (step >= 5) router.replace('/dashboard');
         else if (step === 0) router.replace('/onboarding/step-1-platform');
