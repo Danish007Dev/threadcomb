@@ -12,7 +12,8 @@ import json
 import logging
 import os
 import re
-from typing import Optional
+from math import sqrt
+from typing import Optional, List
 
 import requests
 
@@ -35,6 +36,7 @@ class GeminiClient:
     """Process-wide singleton facade around the Gemini REST API."""
 
     DEFAULT_MODEL = "gemini-2.5-flash-lite"
+    DEFAULT_EMBEDDING_MODEL = settings.GEMINI_EMBEDDING_MODEL
 
     def __init__(self, api_key: str = ""):
         self.api_key = api_key or settings.GEMINI_API_KEY
@@ -67,6 +69,29 @@ class GeminiClient:
             raise ValueError("Gemini returned no text payload")
         return "\n".join(texts)
 
+    def _embed(self, text: str, model: str) -> List[float]:
+        if not self.api_key:
+            raise ValueError("GEMINI_API_KEY is not configured")
+
+        url = f"{GEMINI_API_BASE}/models/{model}:embedContent"
+        payload = {
+            "content": {"parts": [{"text": text}]},
+        }
+        response = requests.post(url, params={"key": self.api_key}, json=payload, timeout=60)
+        response.raise_for_status()
+        response_json = response.json()
+        embedding = response_json.get("embedding", {})
+        values = embedding.get("values") or []
+        if not values:
+            raise ValueError("Gemini returned no embedding values")
+
+        expected = settings.GEMINI_EMBEDDING_DIMENSIONS
+        if expected and len(values) != expected:
+            raise ValueError(
+                f"Gemini embedding dimension mismatch: got {len(values)}, expected {expected}"
+            )
+        return [float(value) for value in values]
+
     async def send_text(
         self,
         system_message: str,
@@ -76,6 +101,24 @@ class GeminiClient:
     ) -> str:
         """Send a one-shot request and return the model's response as a string."""
         return await asyncio.to_thread(self._generate, system_message, user_message, model)
+
+    async def embed_text(
+        self,
+        text: str,
+        model: str = DEFAULT_EMBEDDING_MODEL,
+        normalize: Optional[bool] = None,
+    ) -> List[float]:
+        """Return an embedding vector for a text input.
+
+        Normalization defaults to the GEMINI_EMBEDDING_NORMALIZE setting.
+        """
+        vector = await asyncio.to_thread(self._embed, text, model)
+        should_normalize = (
+            settings.GEMINI_EMBEDDING_NORMALIZE if normalize is None else normalize
+        )
+        if should_normalize:
+            return _l2_normalize(vector)
+        return vector
 
     async def send_json(
         self,
@@ -101,3 +144,10 @@ gemini_client = GeminiClient()
 def get_gemini_client() -> GeminiClient:
     """Return the application-scoped Gemini client singleton."""
     return gemini_client
+
+
+def _l2_normalize(values: List[float]) -> List[float]:
+    norm = sqrt(sum(value * value for value in values))
+    if norm == 0:
+        return values
+    return [value / norm for value in values]

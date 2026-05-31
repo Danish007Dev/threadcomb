@@ -124,6 +124,8 @@ class Deal(BaseModel):
     status: DealStatus = DealStatus.UNANSWERED
     deal_type: Optional[DealType] = None
     cluster_label: Optional[str] = None
+    embedding_vector: Optional[List[float]] = None
+    embedding_model: Optional[str] = None
     raw_signals: DealRawSignals
     negotiation: NegotiationRecord = Field(default_factory=NegotiationRecord)
     extraction_confidence: Optional[float] = None

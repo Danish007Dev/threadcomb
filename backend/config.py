@@ -18,6 +18,15 @@ class Settings:
 
     # Gemini
     GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
+    GEMINI_EMBEDDING_MODEL: str = os.environ.get(
+        "GEMINI_EMBEDDING_MODEL", "gemini-embedding-2"
+    )
+    GEMINI_EMBEDDING_DIMENSIONS: int = int(
+        os.environ.get("GEMINI_EMBEDDING_DIMENSIONS", "768")
+    )
+    GEMINI_EMBEDDING_NORMALIZE: bool = os.environ.get(
+        "GEMINI_EMBEDDING_NORMALIZE", "true"
+    ).lower() in {"1", "true", "yes"}
 
     # Google OAuth
     GOOGLE_CLIENT_ID: str = os.environ.get("GOOGLE_CLIENT_ID", "")
