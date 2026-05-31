@@ -96,3 +96,58 @@ export async function connectGmail(creatorId: string) {
 export async function onboardingStatus(creatorId: string) {
   return request<Creator>(`/onboarding/${creatorId}/status`);
 }
+
+// ---------- Ingestion (Session 3) ----------
+
+export async function startIngestion() {
+  return request<{ job_id: string; sse_channel: string; status: string }>(
+    '/ingestion/start',
+    { method: 'POST' }
+  );
+}
+
+export async function triggerDevExtraction(jobId: string) {
+  return request<{ status: string; threads_triggered: number; mode: string }>(
+    `/ingestion/trigger-dev-extraction/${jobId}`,
+    { method: 'POST' }
+  );
+}
+
+// ---------- Audit (Session 3) ----------
+
+export async function getAuditReport(creatorId: string) {
+  return request<AuditReport>(`/audit/report/${creatorId}`);
+}
+
+export async function triggerAuditGeneration(creatorId: string) {
+  return request<{ status: string; message: string }>(
+    `/audit/generate/${creatorId}`,
+    { method: 'POST' }
+  );
+}
+
+// ---------- Types for API responses ----------
+
+export interface AuditFinding {
+  section: string;
+  title: string;
+  severity: 'high' | 'medium' | 'low' | 'positive';
+  finding_text: string;
+  evidence: string;
+  recommendation: string;
+  value_inr: number | null;
+  value_unknown: boolean;
+}
+
+export interface AuditReport {
+  _id: string;
+  creator_id: string;
+  findings: AuditFinding[];
+  executive_summary: string;
+  total_recoverable_value: number | null;
+  total_recoverable_unknown: boolean;
+  skills_map_summary: string;
+  data_quality_note: string | null;
+  pdf_url: string;
+  created_at: string;
+}

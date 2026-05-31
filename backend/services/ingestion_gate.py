@@ -180,3 +180,43 @@ async def classify_thread_gate(
         reasoning_brief=reasoning,
         tokens_used=0,
     )
+
+
+# ── Fan Signal Detection (Session 3) ────────────────────────────────────────
+# Fan signal keywords — checked AFTER brand deal gate.
+# Only classify fan signals for threads that did NOT pass as deal signals.
+
+FAN_SIGNAL_KEYWORDS = [
+    "love your content", "huge fan", "inspired by", "your video helped",
+    "could you do a video on", "tutorial request", "collaboration between creators",
+    "your work is amazing", "can you review", "you should cover",
+]
+
+
+def detect_fan_signal(subject: str, text: str) -> Optional[str]:
+    """
+    Check if a non-deal thread contains fan signal keywords.
+    Returns the signal_type if detected, None otherwise.
+    """
+    combined = f"{subject} {text}".lower()
+
+    appreciation_keywords = ["love your content", "huge fan", "inspired by", "your work is amazing"]
+    request_keywords = ["could you do a video on", "tutorial request", "can you review", "you should cover"]
+    collab_keywords = ["collaboration between creators"]
+
+    for kw in appreciation_keywords:
+        if kw in combined:
+            return "fan_appreciation"
+    for kw in request_keywords:
+        if kw in combined:
+            return "content_request"
+    for kw in collab_keywords:
+        if kw in combined:
+            return "creator_collab"
+
+    # Check any remaining fan signal keywords
+    for kw in FAN_SIGNAL_KEYWORDS:
+        if kw in combined:
+            return "general"
+
+    return None

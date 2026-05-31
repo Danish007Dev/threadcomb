@@ -151,3 +151,33 @@ def _l2_normalize(values: List[float]) -> List[float]:
     if norm == 0:
         return values
     return [value / norm for value in values]
+
+
+# ── Google GenAI SDK client (Session 3) ────────────────────────────────────
+# The new google.genai.Client supports structured output with Pydantic schemas,
+# which is required for DealExtraction / SynthesisReport calls.
+# This coexists with the REST-based GeminiClient above.
+
+_genai_client = None
+
+
+def get_gemini_client_genai():
+    """Return a google.genai.Client initialized with GEMINI_API_KEY.
+
+    This is separate from the old GeminiClient singleton — it uses the new
+    google-genai SDK which supports response_schema with Pydantic models.
+    """
+    global _genai_client
+    if _genai_client is None:
+        try:
+            from google import genai
+            api_key = settings.GEMINI_API_KEY
+            if not api_key:
+                raise ValueError("GEMINI_API_KEY is not configured")
+            _genai_client = genai.Client(api_key=api_key)
+            logger.info("Initialized google.genai.Client for structured output")
+        except ImportError:
+            raise ImportError(
+                "google-genai package is required. Install with: pip install google-genai"
+            )
+    return _genai_client

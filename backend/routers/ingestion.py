@@ -1,4 +1,4 @@
-"""Gmail ingestion endpoints and background orchestrator (Session 2B)."""
+"""Gmail ingestion endpoints and background orchestrator (Sessions 2B + 3)."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+
+from config import settings
 
 from database.ingestion_jobs import increment_job_counter, update_job_status
 from database.mongodb import get_db_singleton
@@ -57,6 +59,52 @@ async def start_ingestion(
     )
 
     return {"job_id": job_id, "sse_channel": job.sse_channel, "status": "started"}
+
+
+@router.post("/trigger-dev-extraction/{job_id}")
+async def trigger_dev_extraction(
+    job_id: str,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    current_creator=Depends(get_current_creator),
+):
+    """
+    DEV ONLY — pulls queued threads from ingestion_jobs and sends them
+    directly to run_extraction_worker, bypassing Cloud Tasks.
+    Use when running locally without a public WORKER_BASE_URL.
+    """
+    if not settings.DEBUG:
+        raise HTTPException(status_code=403, detail="Only available in DEBUG mode")
+
+    db = get_db_singleton()
+    creator_id = current_creator["creator_id"]
+    try:
+        oid = ObjectId(job_id)
+    except (InvalidId, TypeError):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    job = await db.ingestion_jobs.find_one({"_id": oid, "creator_id": creator_id})
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Directly call extraction on each queued thread_id
+    from workers.extract_thread import run_extraction_worker
+    triggered = 0
+    for ts in job.get("thread_statuses", []):
+        if ts.get("queued_for_extraction") and not ts.get("extraction_complete"):
+            payload = {
+                "thread_id": ts.get("thread_id", ""),
+                "creator_id": creator_id,
+                "job_id": job_id,
+                "sanitised_text": ts.get("sanitised_text", ""),
+                "sender_email": ts.get("sender_email", ""),
+                "subject": ts.get("subject", ""),
+                "hindi_mode": ts.get("hindi_mode", False),
+            }
+            background_tasks.add_task(run_extraction_worker, payload=payload)
+            triggered += 1
+
+    return {"status": "ok", "threads_triggered": triggered, "mode": "dev_direct"}
 
 
 @router.get("/status/{job_id}")
@@ -146,6 +194,41 @@ async def gmail_push_webhook(
         logger.error("Gmail webhook error: %s", exc)
 
     return {"status": "ok"}
+
+
+async def generate_first_signal(creator_id: str, thread_statuses: list):
+    """
+    Generates immediate value for the creator within 60 seconds of audit start.
+    Uses gate classification results only — no Gemini extraction yet.
+    Runs BEFORE the extraction worker processes threads.
+    """
+    deal_signal_threads = [
+        t for t in thread_statuses
+        if t.get("gate_decision") in ("deal_signal", "hindi_mixed")
+    ]
+    unanswered_count = len(deal_signal_threads)
+
+    if unanswered_count == 0:
+        return  # No deal signals found — don't show a first signal
+
+    # Pull sender emails from thread statuses for display
+    # These are already available from the gate pass
+    brand_emails = list(set(
+        t.get("sender_email", "").split("@")[-1]
+        for t in deal_signal_threads
+        if t.get("sender_email")
+    ))[:3]
+
+    brand_domains_display = ", ".join(brand_emails) if brand_emails else "several brands"
+
+    await publish_sse_event(creator_id, {
+        "event": "first_signal",
+        "title": "First finding — before your full audit runs",
+        "message": f"We found {unanswered_count} brand deal {'email' if unanswered_count == 1 else 'emails'} in your inbox.",
+        "detail": f"Brands involved: {brand_domains_display}",
+        "sub_detail": "We're now extracting the details from each one. Your full audit will be ready soon.",
+        "deal_count": unanswered_count,
+    })
 
 
 async def run_full_ingestion(creator_id: str, job_id: str) -> None:
@@ -328,6 +411,23 @@ async def run_full_ingestion(creator_id: str, job_id: str) -> None:
                 "hitl_queue": hitl_count,
             },
         )
+
+        # ── First Signal — immediate value before full audit ────────────
+        job_doc = await db.ingestion_jobs.find_one({"_id": ObjectId(job_id)})
+        if job_doc:
+            await generate_first_signal(
+                creator_id,
+                job_doc.get("thread_statuses", []),
+            )
+
+        # ── Voice profiling — runs async, not needed for audit ──────────
+        await publish_sse_event(creator_id, {
+            "event": "voice_profiling",
+            "message": "Learning your communication style...",
+        })
+        from services.voice_profiler import run_voice_profiling
+        # Fire and forget — voice profile not needed for the Audit Report
+        asyncio.create_task(run_voice_profiling(creator_id=creator_id))
 
     except Exception as exc:  # noqa: BLE001
         logger.error("Ingestion error for creator %s: %s", creator_id, exc, exc_info=True)

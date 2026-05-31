@@ -13,6 +13,13 @@ export interface IngestionEvent {
   passed_gate?: number;
   failed_gate?: number;
   hitl_queue?: number;
+  // First Signal (Session 3)
+  title?: string;
+  detail?: string;
+  sub_detail?: string;
+  deal_count?: number;
+  // Audit complete (Session 3)
+  pdf_url?: string;
 }
 
 export interface IngestionStatusSnapshot {

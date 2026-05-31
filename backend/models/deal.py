@@ -5,11 +5,125 @@ in Session 1 so that the collections can be created and indexed up-front.
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime, timezone
 from enum import Enum
 
 from .common import DataClassification, DataClassificationTier
+
+
+# ============================================================================
+# Gemini Extraction Schemas (Session 3)
+# These are flat schemas for Gemini structured output — NOT MongoDB documents.
+# The extraction worker maps these into the Deal/Brand document structures.
+# ============================================================================
+
+
+class DealExtraction(BaseModel):
+    """
+    Output schema for Gemini Flash extraction of a single brand deal email thread.
+    Used with response_mime_type='application/json' and response_schema=DealExtraction.
+    Every field has a default — extraction must never fail due to missing fields.
+    """
+
+    # Brand identification
+    brand_name: Optional[str] = None
+    brand_domain: Optional[str] = None          # extracted from sender email if not stated
+    brand_category: Optional[str] = None         # beauty | gaming | edtech | fintech | fashion | fmcg | tech | food | sports | wellness | other
+
+    # Deal type
+    deal_type: Optional[Literal[
+        "instagram_reel", "instagram_post", "instagram_story",
+        "youtube_dedicated", "youtube_integration", "youtube_shorts",
+        "multi_platform", "other"
+    ]] = None
+
+    # Financial signals
+    amount_raw_text: Optional[str] = None        # exact text from email mentioning money
+    amount_ambiguity_flag: bool = False          # True if amount is informal/unclear
+    amount_min: Optional[float] = None          # None if ambiguous
+    amount_max: Optional[float] = None          # None if ambiguous
+    amount_typical: Optional[float] = None      # best single estimate if stated
+    currency: str = "INR"
+
+    # CRITICAL RULE: If amount_ambiguity_flag is True,
+    # amount_min, amount_max, and amount_typical MUST all be None.
+    # Never auto-populate financial fields when the amount is unclear.
+    # Examples that trigger ambiguity flag:
+    # "50 hazaar", "do lakh", "let's discuss rates", "competitive budget",
+    # "as per your rate card", any non-numeric expression
+
+    # Contract signals
+    exclusivity_mentioned: bool = False
+    exclusivity_scope: Optional[str] = None     # "instagram only", "all platforms", etc.
+    exclusivity_duration_days: Optional[int] = None
+    payment_terms_mentioned: Optional[str] = None  # "NET-30", "50% upfront", etc.
+    payment_days: Optional[int] = None
+    deliverables: List[str] = []                # ["1 Reel", "3 Stories", "1 YouTube integration"]
+    timeline_days: Optional[int] = None         # days to deliver after acceptance
+
+    # Deal status
+    deal_status: Literal[
+        "unanswered",    # creator never replied
+        "negotiating",   # back and forth in progress
+        "accepted",      # deal confirmed
+        "rejected",      # creator or brand declined
+        "delivered",     # content posted
+        "invoiced",      # invoice sent
+        "paid",          # payment received
+        "overdue",       # payment past due
+        "cancelled"      # deal fell through
+    ] = "unanswered"
+
+    negotiation_state: Optional[Literal[
+        "initial_inquiry", "counter_sent", "counter_received",
+        "terms_agreed", "contract_sent", "signed"
+    ]] = None
+
+    # Sender metadata
+    brand_contact_email: Optional[str] = None
+    is_agency_contact: bool = False             # True if an agency is reaching out on behalf of brand
+    gmail_thread_id: str = ""
+
+    # Response timing
+    creator_response_time_hrs: Optional[float] = None   # hours between first email and creator reply
+    thread_unanswered: bool = False             # True if creator never replied to this thread
+
+    # Extraction quality
+    extraction_confidence: float = 0.0         # 0.0–1.0: model's confidence in this extraction
+    requires_human_review: bool = False
+    review_reason: Optional[str] = None        # why human review is needed
+
+    # Hindi/mixed language flag
+    hindi_mode: bool = False                   # True if email contains Hindi content
+    language: str = "en"
+
+    # Email metadata
+    sender_email: str = ""
+    subject: str = ""
+    date_sent: Optional[str] = None            # ISO string from email header
+
+
+class ContractExtraction(BaseModel):
+    """
+    Output schema for extracting structured data from a PDF contract attachment.
+    Used separately from DealExtraction — runs only on PDF attachments in deal threads.
+    """
+    payment_days: Optional[int] = None
+    payment_structure: Optional[str] = None    # "upfront", "milestone", "net-30", etc.
+    exclusivity_scope: Optional[str] = None
+    exclusivity_duration_days: Optional[int] = None
+    ip_ownership: Optional[Literal["creator_retains", "brand_acquires", "shared", "not_stated"]] = None
+    kill_fee_present: bool = False
+    kill_fee_percentage: Optional[float] = None
+    revision_limit: Optional[int] = None
+    usage_rights_duration_days: Optional[int] = None
+    content_approval_required: bool = False
+    morality_clause_present: bool = False
+    overall_risk_score: float = 0.0            # 1.0 (creator-friendly) to 5.0 (brand-heavy)
+    requires_human_review: bool = False
+    review_reason: Optional[str] = None
+    extraction_confidence: float = 0.0
 
 
 # ============================================================================

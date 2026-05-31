@@ -1,5 +1,3 @@
-"""ThreadComb backend configuration."""
-
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -48,6 +46,9 @@ class Settings:
     CLOUD_TASKS_QUEUE_NAME: str = os.environ.get(
         "CLOUD_TASKS_QUEUE_NAME", "threadcomb-ingestion"
     )
+
+    # Debug mode — enables dev-only endpoints (trigger-direct, etc.)
+    DEBUG: bool = os.environ.get("DEBUG", "true").lower() in {"1", "true", "yes"}
 
     # Cloud Tasks worker (Session 2B+)
     WORKER_BASE_URL: str = os.environ.get("WORKER_BASE_URL", "")

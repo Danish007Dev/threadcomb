@@ -24,6 +24,7 @@ from routers import onboarding as onboarding_router
 from routers import health as health_router
 from routers import ingestion as ingestion_router
 from routers import sse as sse_router
+from routers import audit as audit_router
 from workers import process_thread as process_thread_router
 
 logging.basicConfig(
@@ -43,6 +44,7 @@ api_router.include_router(auth_router.router)
 api_router.include_router(onboarding_router.router)
 api_router.include_router(ingestion_router.router)
 api_router.include_router(sse_router.router)
+api_router.include_router(audit_router.router)
 
 
 @api_router.get("/")
