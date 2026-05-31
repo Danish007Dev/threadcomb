@@ -100,7 +100,12 @@ async def pipeline_rate_gap(db, creator_id: str) -> dict:
     Compares creator's accepted deal rates against niche_graph benchmarks.
     Only runs if creator has accepted deals with non-ambiguous amounts.
     """
-    creator = await db.creators.find_one({"_id": ObjectId(creator_id)})
+    creator = await db.creators.find_one({"creator_id": creator_id})
+    if not creator:
+        try:
+            creator = await db.creators.find_one({"_id": ObjectId(creator_id)})
+        except Exception:
+            pass
     if not creator:
         return {}
 

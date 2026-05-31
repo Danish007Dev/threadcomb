@@ -301,11 +301,9 @@ async def _upsert_brand(db, extraction: DealExtraction) -> Optional[str]:
             "$set": update_set,
             "$setOnInsert": {
                 "created_at": datetime.now(timezone.utc),
-                "payment_intelligence": {
-                    "payment_reliability": 0.5,
-                    "avg_payment_days": None,
-                    "total_deals_on_platform": 0,
-                },
+                # Use dot-path to avoid conflict with $set/$inc on payment_intelligence.*
+                "payment_intelligence.payment_reliability": 0.5,
+                "payment_intelligence.avg_payment_days": None,
                 "data_classification": {
                     "tier": "anonymisable",
                     "anonymisation_eligible": True,

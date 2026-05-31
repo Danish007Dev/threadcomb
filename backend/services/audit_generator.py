@@ -10,6 +10,7 @@ from models.audit import SynthesisContext, SynthesisReport
 
 logger = logging.getLogger(__name__)
 SYNTHESIS_MODEL = "gemini-2.5-pro"
+SYNTHESIS_FALLBACK_MODEL = "gemini-2.5-flash"
 
 SYNTHESIS_SYSTEM_PROMPT = """\
 You are generating a Skills Audit Report for a content creator in India.
@@ -41,27 +42,37 @@ Return valid JSON matching the SynthesisReport schema. No markdown. JSON only.
 
 
 async def generate_audit_report(context: SynthesisContext) -> SynthesisReport:
-    """Calls Gemini Pro to synthesise the audit findings."""
+    """Calls Gemini Pro to synthesise the audit findings.
+    Falls back to Gemini Flash if Pro quota is exceeded.
+    """
     from services.gemini_client import get_gemini_client_genai
     from google.genai import types
 
     client = get_gemini_client_genai()
 
-    # Serialize context — Gemini reads this as grounding data
     context_json = context.model_dump_json(indent=2)
 
-    response = await asyncio.to_thread(
-        client.models.generate_content,
-        model=SYNTHESIS_MODEL,
-        contents=f"Generate the Audit Report for this creator's data:\n\n{context_json}",
-        config=types.GenerateContentConfig(
-            system_instruction=SYNTHESIS_SYSTEM_PROMPT,
-            response_mime_type="application/json",
-            response_schema=SynthesisReport,
-            temperature=0.1,
-            max_output_tokens=3000,
-        )
-    )
+    for model in [SYNTHESIS_MODEL, SYNTHESIS_FALLBACK_MODEL]:
+        try:
+            response = await asyncio.to_thread(
+                client.models.generate_content,
+                model=model,
+                contents=f"Generate the Audit Report for this creator's data:\n\n{context_json}",
+                config=types.GenerateContentConfig(
+                    system_instruction=SYNTHESIS_SYSTEM_PROMPT,
+                    response_mime_type="application/json",
+                    response_schema=SynthesisReport,
+                    temperature=0.1,
+                    max_output_tokens=3000,
+                )
+            )
+            report = SynthesisReport.model_validate_json(response.text)
+            logger.info(f"Audit synthesis completed with model: {model}")
+            return report
+        except Exception as e:
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                logger.warning(f"Quota exhausted for {model}, trying fallback...")
+                continue
+            raise
 
-    report = SynthesisReport.model_validate_json(response.text)
-    return report
+    raise RuntimeError("All synthesis models exhausted their quotas")

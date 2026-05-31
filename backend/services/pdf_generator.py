@@ -101,22 +101,34 @@ def generate_audit_pdf(report: SynthesisReport, creator_handle: str, creator_nic
 async def upload_audit_pdf_to_gcs(pdf_bytes: bytes, creator_id: str) -> str:
     """Uploads PDF to GCS and returns the public URL.
 
-    Falls back to returning a placeholder URL if GCS is not configured
-    (e.g., during local development).
+    In dev mode (DEBUG=true or no GCS bucket), saves to local filesystem
+    and returns a local API URL for download.
+    Falls back gracefully if GCS is not configured.
     """
     from config import settings
+    import os
+    from pathlib import Path
 
-    if not settings.GCS_BUCKET_NAME:
-        logger.warning("GCS_BUCKET_NAME not configured — skipping PDF upload")
-        return f"local://audit_reports/{creator_id}/audit.pdf"
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m')
 
+    # ── Dev mode: save locally ──────────────────────────────────────────────
+    if settings.DEBUG or not settings.GCS_BUCKET_NAME:
+        local_dir = Path(settings.GMAIL_TOKEN_DIR).parent.parent / "audit_pdfs" / creator_id
+        local_dir.mkdir(parents=True, exist_ok=True)
+        local_path = local_dir / f"{timestamp}_audit.pdf"
+        local_path.write_bytes(pdf_bytes)
+        logger.info(f"PDF saved locally: {local_path}")
+        # Return API-serveable path (frontend strips local:// prefix and hides download button)
+        return f"local://{local_path}"
+
+    # ── Production: upload to GCS ───────────────────────────────────────────
     try:
         from google.cloud import storage
 
         def _upload():
             client = storage.Client()
             bucket = client.bucket(settings.GCS_BUCKET_NAME)
-            blob_name = f"audit_reports/{creator_id}/{datetime.now(timezone.utc).strftime('%Y%m')}_audit.pdf"
+            blob_name = f"audit_reports/{creator_id}/{timestamp}_audit.pdf"
             blob = bucket.blob(blob_name)
             blob.upload_from_string(pdf_bytes, content_type="application/pdf")
             blob.make_public()
@@ -126,5 +138,11 @@ async def upload_audit_pdf_to_gcs(pdf_bytes: bytes, creator_id: str) -> str:
 
     except Exception as e:
         logger.error(f"GCS upload failed for creator {creator_id}: {e}")
-        # Return a fallback — the report is still stored in MongoDB
-        return f"gcs_error://audit_reports/{creator_id}/audit.pdf"
+        # Fallback: save locally even in production
+        local_dir = Path("audit_pdfs") / creator_id
+        local_dir.mkdir(parents=True, exist_ok=True)
+        local_path = local_dir / f"{timestamp}_audit.pdf"
+        local_path.write_bytes(pdf_bytes)
+        logger.info(f"PDF saved locally as fallback: {local_path}")
+        return f"local://{local_path}"
+
