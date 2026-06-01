@@ -23,6 +23,7 @@ COLLECTION_NAMES = [
     "niche_graph",
     "audit_reports",
     "fan_signals",
+    "deal_drafts",
 ]
 
 
@@ -137,5 +138,11 @@ async def create_indexes(db: AsyncIOMotorDatabase) -> None:
     # fan_signals (Session 3)
     await db.fan_signals.create_index("creator_id")
     await db.fan_signals.create_index("detected_at")
+
+    # deal_drafts (Session 4)
+    await db.deal_drafts.create_index("creator_id")
+    await db.deal_drafts.create_index("deal_id")
+    await db.deal_drafts.create_index([("creator_id", 1), ("creator_action", 1)])
+    await db.deal_drafts.create_index([("creator_id", 1), ("generated_at", -1)])
 
     logger.info("All MongoDB indexes ensured.")

@@ -21,7 +21,11 @@ from database.mongodb import get_db
 
 logger = logging.getLogger(__name__)
 
-GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+GMAIL_SCOPES = [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.send",        # Session 4: Deal Chief sends approved replies
+    "https://www.googleapis.com/auth/calendar.events",   # Session 4: Follow-up reminders
+]
 
 
 def build_secret_path(creator_id: str, project: Optional[str] = None) -> str:

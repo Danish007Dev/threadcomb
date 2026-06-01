@@ -151,3 +151,109 @@ export interface AuditReport {
   pdf_url: string;
   created_at: string;
 }
+
+// ---------- Deals (Session 4) ----------
+
+export interface DraftFlag {
+  flag_type: string;
+  severity: 'high' | 'medium' | 'low';
+  message: string;
+  recommended_action: string | null;
+}
+
+export interface DealDraft {
+  _id: string;
+  deal_id: string;
+  thread_id: string;
+  creator_id: string;
+  brand_name: string | null;
+  brand_domain: string | null;
+  brand_reliability_score: number;
+  brand_is_new: boolean;
+  offered_amount: number | null;
+  offered_amount_ambiguous: boolean;
+  market_p50: number | null;
+  market_p25: number | null;
+  market_p75: number | null;
+  rate_gap_percentage: number | null;
+  benchmark_confidence: number;
+  similar_deals_found: number;
+  similar_deals_summary: string | null;
+  draft_text: string;
+  draft_language: string;
+  model_used: string;
+  voice_compliance_score: number;
+  voice_compliance_issues: string[];
+  flags: DraftFlag[];
+  has_high_severity_flags: boolean;
+  generated_at: string;
+  generation_latency_ms: number | null;
+  creator_action: string | null;
+  final_text: string | null;
+  sent_at: string | null;
+  calendar_event_id: string | null;
+}
+
+export interface InboundDeal {
+  _id: string;
+  creator_id: string;
+  brand_id: string | null;
+  deal_type: string | null;
+  status: string;
+  financials: {
+    amount: number | null;
+    amount_inr: number | null;
+    amount_ambiguity_flag: boolean;
+    amount_raw_text: string | null;
+    currency: string;
+    payment_terms: string | null;
+  };
+  raw_signals: {
+    deliverables: string[];
+    exclusivity_mentioned: boolean;
+    exclusivity_duration_days: number | null;
+    brand_contact_email: string | null;
+    gmail_thread_id: string;
+    is_agency_contact: boolean;
+  };
+  brand?: {
+    name: string;
+    domain: string;
+    payment_reliability: number;
+    avg_payment_days: number | null;
+  };
+  has_pending_draft: boolean;
+  created_at: string;
+}
+
+export async function getInboundDeals(): Promise<InboundDeal[]> {
+  return request('/deals/inbound');
+}
+
+export async function generateDealDraft(dealId: string): Promise<{ status: string; message: string }> {
+  return request(`/deals/generate-draft/${dealId}`, { method: 'POST' });
+}
+
+export async function getDealDraft(dealId: string): Promise<DealDraft> {
+  return request(`/deals/draft/${dealId}`);
+}
+
+export async function approveDeal(
+  dealId: string,
+  finalText: string,
+  action: 'approved' | 'edited' = 'approved',
+  followUpDays: number = 3,
+): Promise<{ status: string; message: string; calendar_event_created: boolean; follow_up_date: string }> {
+  return request(`/deals/approve/${dealId}`, {
+    method: 'POST',
+    body: JSON.stringify({ final_text: finalText, action, follow_up_days: followUpDays }),
+  });
+}
+
+export async function rejectDeal(dealId: string, reason: string = ''): Promise<{ status: string; message: string }> {
+  return request(`/deals/reject/${dealId}`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+

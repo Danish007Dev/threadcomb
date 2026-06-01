@@ -490,6 +490,15 @@ async def run_incremental_ingestion(
                     delay_seconds=0,
                 )
 
+                # Session 4: Immediately notify creator of new brand deal detection
+                await publish_sse_event(creator_id, {
+                    "event": "new_deal_detected",
+                    "message": f"New brand deal email from {sanitised.sender_email.split('@')[-1]}",
+                    "brand_domain": sanitised.sender_email.split("@")[-1],
+                    "subject": sanitised.subject,
+                    "action": "Extraction in progress — draft will be ready in ~30 seconds",
+                })
+
     except ValueError as exc:
         if "HISTORY_ID_EXPIRED" in str(exc):
             logger.warning(

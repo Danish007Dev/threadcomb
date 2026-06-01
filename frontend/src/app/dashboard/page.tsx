@@ -29,11 +29,12 @@ import type { AuditReport, AuditFinding } from '../../lib/api';
 import { cn } from '../../lib/utils';
 import { IngestionProgress } from '../../components/ingestion/IngestionProgress';
 import { FirstSignalCard } from './components/FirstSignalCard';
+import { DealsSummaryWidget } from './components/DealsSummaryWidget';
 import { useIngestionStatus } from '../../hooks/useIngestionStatus';
 
 const NAV = [
   { label: 'Dashboard', Icon: LayoutDashboard, href: '/dashboard', active: true, testId: 'sidebar-link-dashboard' },
-  { label: 'Deals', Icon: Handshake, href: '#', active: false, testId: 'sidebar-link-deals' },
+  { label: 'Deals', Icon: Handshake, href: '/dashboard/deals', active: false, testId: 'sidebar-link-deals' },
   { label: 'Invoices', Icon: ReceiptText, href: '#', active: false, testId: 'sidebar-link-invoices' },
   { label: 'Reports', Icon: BarChart3, href: '#', active: false, testId: 'sidebar-link-reports' },
   { label: 'Settings', Icon: Settings, href: '#', active: false, testId: 'sidebar-link-settings' },
@@ -355,6 +356,11 @@ export default function DashboardPage() {
           {/* State 4: Audit complete */}
           {dashboardState === 'complete' && auditReport && (
             <div className="max-w-3xl mx-auto space-y-6">
+              {/* Deals needing attention widget (Session 4) */}
+              {creator && (
+                <DealsSummaryWidget creatorId={creator.creator_id} />
+              )}
+
               {/* Executive Summary Card */}
               <div className="tc-card p-6 md:p-8">
                 <div className="flex items-start justify-between gap-4 mb-4">

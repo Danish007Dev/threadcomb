@@ -168,6 +168,16 @@ async def run_extraction_worker(payload: dict):
 
         logger.info(f"Extraction complete: thread={thread_id} brand={extraction.brand_name} deal_id={deal_id}")
 
+        # ── Step 10 (Session 4): Trigger Deal Chief for automatic draft ───────
+        try:
+            from routers.deals import run_deal_chief_for_deal
+            asyncio.create_task(
+                run_deal_chief_for_deal(deal_id=deal_id, creator_id=creator_id)
+            )
+            logger.info(f"Deal Chief triggered for deal {deal_id}")
+        except Exception as e:
+            logger.warning(f"Deal Chief trigger failed (non-critical): {e}")
+
     except Exception as e:
         logger.error(f"Extraction worker error for thread {thread_id}: {e}", exc_info=True)
         if job_id:
