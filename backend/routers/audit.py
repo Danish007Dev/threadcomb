@@ -48,7 +48,9 @@ async def get_audit_report(
     current_creator=Depends(get_current_creator),
 ):
     """Returns the latest audit report for a creator."""
+    print(f"DEBUG: get_audit_report called for creator_id: {creator_id}")
     if current_creator.get("creator_id") != creator_id:
+        print(f"DEBUG: 403 Forbidden. current_creator: {current_creator.get('creator_id')}")
         raise HTTPException(status_code=403)
 
     db = get_db_singleton()
@@ -57,8 +59,10 @@ async def get_audit_report(
         sort=[("created_at", -1)]
     )
     if not report:
+        print(f"DEBUG: 404 No audit report yet for {creator_id}")
         raise HTTPException(status_code=404, detail="No audit report yet")
 
+    print(f"DEBUG: Found report: {report['_id']}")
     report["_id"] = str(report["_id"])
     return report
 
@@ -77,7 +81,7 @@ async def run_audit_generation(creator_id: str):
         if not creator:
             # Try by _id
             try:
-                creator = await db.creators.find_one({"_id": ObjectId(creator_id)})
+                creator = await db.creators.find_one({"creator_id": creator_id})
             except Exception:
                 pass
         if not creator:

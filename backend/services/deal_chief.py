@@ -78,10 +78,7 @@ async def run_deal_chief_pipeline(
     start_time = time.time()
 
     # ── Fetch creator for context ─────────────────────────────────────────────
-    creator = await db.creators.find_one({"_id": ObjectId(creator_id)})
-    if not creator:
-        # Try by creator_id string field (used by onboarding)
-        creator = await db.creators.find_one({"creator_id": creator_id})
+    creator = await db.creators.find_one({"creator_id": creator_id})
     if not creator:
         raise ValueError(f"Creator {creator_id} not found")
 

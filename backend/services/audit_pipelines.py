@@ -103,7 +103,7 @@ async def pipeline_rate_gap(db, creator_id: str) -> dict:
     creator = await db.creators.find_one({"creator_id": creator_id})
     if not creator:
         try:
-            creator = await db.creators.find_one({"_id": ObjectId(creator_id)})
+            creator = await db.creators.find_one({"creator_id": creator_id})
         except Exception:
             pass
     if not creator:

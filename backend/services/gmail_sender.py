@@ -23,6 +23,11 @@ async def send_gmail_reply(
     ACTION_POLICY enforces that send_email ALWAYS requires creator approval.
     This function is the execution step AFTER that approval.
     """
+    if thread_id.startswith("demo_"):
+        logger.info(f"DEMO MODE: Bypassing real Gmail API for demo thread {thread_id}")
+        await asyncio.sleep(1.5)  # Simulate network latency
+        return f"mock_sent_{thread_id}"
+
     from services.gmail_auth import get_gmail_credentials
     credentials = await get_gmail_credentials(creator_id)
     service = build("gmail", "v1", credentials=credentials)

@@ -29,8 +29,12 @@ import type { AuditReport, AuditFinding } from '../../lib/api';
 import { cn } from '../../lib/utils';
 import { IngestionProgress } from '../../components/ingestion/IngestionProgress';
 import { FirstSignalCard } from './components/FirstSignalCard';
-import { DealsSummaryWidget } from './components/DealsSummaryWidget';
 import { useIngestionStatus } from '../../hooks/useIngestionStatus';
+import { OrchestratorBar } from '../../components/orchestrator/OrchestratorBar';
+import { WeeklyDigestWidget } from './components/WeeklyDigestWidget';
+import { DealPipelineWidget } from './components/DealPipelineWidget';
+import { InvoiceTrackerWidget } from './components/InvoiceTrackerWidget';
+import { ActivityFeedWidget } from './components/ActivityFeedWidget';
 
 const NAV = [
   { label: 'Dashboard', Icon: LayoutDashboard, href: '/dashboard', active: true, testId: 'sidebar-link-dashboard' },
@@ -190,6 +194,12 @@ export default function DashboardPage() {
               key={label}
               href={href}
               data-testid={testId}
+              onClick={(e) => {
+                if (href === '#') {
+                  e.preventDefault();
+                  alert(`The ${label} page is not built for this prototype. Its functionality is integrated into the Dashboard widgets.`);
+                }
+              }}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                 active
@@ -353,124 +363,22 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* State 4: Audit complete */}
-          {dashboardState === 'complete' && auditReport && (
-            <div className="max-w-3xl mx-auto space-y-6">
-              {/* Deals needing attention widget (Session 4) */}
-              {creator && (
-                <DealsSummaryWidget creatorId={creator.creator_id} />
-              )}
-
-              {/* Executive Summary Card */}
-              <div className="tc-card p-6 md:p-8">
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Skills Audit</p>
-                    <h2 className="font-heading text-2xl md:text-3xl text-foreground mt-2">
-                      Your Audit Report
-                    </h2>
-                  </div>
-                  {auditReport.pdf_url && !auditReport.pdf_url.startsWith('local://') && !auditReport.pdf_url.startsWith('gcs_error://') && (
-                    <a
-                      href={auditReport.pdf_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
-                      data-testid="download-pdf-btn"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download PDF
-                    </a>
-                  )}
+          {/* State 4: Complete (Operational View) */}
+          {dashboardState === 'complete' && (
+            <div className="max-w-5xl mx-auto space-y-6">
+              <OrchestratorBar creatorId={creator?.creator_id} />
+              
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                  <WeeklyDigestWidget creatorId={creator?.creator_id} />
+                  <DealPipelineWidget />
+                  <InvoiceTrackerWidget />
                 </div>
-                <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
-                  {auditReport.executive_summary}
-                </p>
-                {auditReport.total_recoverable_value != null && auditReport.total_recoverable_value > 0 && (
-                  <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
-                    <p className="text-xs uppercase tracking-wider text-primary font-semibold">Recoverable Value</p>
-                    <p className="text-2xl font-bold text-foreground mt-1">
-                      ₹{auditReport.total_recoverable_value.toLocaleString('en-IN')}
-                    </p>
-                  </div>
-                )}
-                {auditReport.total_recoverable_unknown && !auditReport.total_recoverable_value && (
-                  <div className="mt-4 p-4 rounded-lg bg-muted border border-border/40">
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Recoverable Value</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Unknown — deal amounts not stated in emails. Deal count tracked in findings below.
-                    </p>
-                  </div>
-                )}
+                
+                <div className="lg:col-span-1">
+                  <ActivityFeedWidget />
+                </div>
               </div>
-
-              {/* Findings */}
-              {auditReport.findings.map((finding, idx) => {
-                const config = SEVERITY_CONFIG[finding.severity] || SEVERITY_CONFIG.low;
-                const FindingIcon = config.Icon;
-                return (
-                  <div
-                    key={idx}
-                    className={cn('tc-card p-5 md:p-6 border', config.bgColor)}
-                    data-testid={`finding-card-${idx}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <FindingIcon className={cn('w-5 h-5 mt-0.5 shrink-0', config.color)} />
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-foreground">{finding.title}</h3>
-                          <span className={cn('text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full', config.color, 'bg-white/60 dark:bg-black/20')}>
-                            {finding.severity}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{finding.finding_text}</p>
-                        {finding.value_inr != null && finding.value_inr > 0 && (
-                          <p className="text-sm font-semibold text-foreground">
-                            Value: ₹{finding.value_inr.toLocaleString('en-IN')}
-                          </p>
-                        )}
-                        {finding.value_unknown && (
-                          <p className="text-sm text-muted-foreground italic">
-                            Value: Amount not stated in emails
-                          </p>
-                        )}
-                        <div className="text-xs text-muted-foreground space-y-1 pt-1 border-t border-border/30">
-                          <p><span className="font-medium">Evidence:</span> {finding.evidence}</p>
-                          <p><span className="font-medium">Recommendation:</span> {finding.recommendation}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Skills Map Summary */}
-              {auditReport.skills_map_summary && (
-                <div className="tc-card p-6 md:p-8">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Shield className="w-5 h-5 text-primary" />
-                    <h3 className="font-heading text-lg text-foreground">Your Operational DNA</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {auditReport.skills_map_summary}
-                  </p>
-                </div>
-              )}
-
-              {/* Data Quality Note */}
-              {auditReport.data_quality_note && (
-                <div className="tc-card p-5 border border-border/40">
-                  <div className="flex items-center gap-3 mb-2">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                      Note on Data Quality
-                    </p>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {auditReport.data_quality_note}
-                  </p>
-                </div>
-              )}
             </div>
           )}
         </main>

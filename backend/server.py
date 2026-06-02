@@ -75,6 +75,10 @@ from routers import ingestion as ingestion_router
 from routers import sse as sse_router
 from routers import audit as audit_router
 from routers import deals as deals_router
+from routers import guardian as guardian_router
+from routers import orchestrator as orchestrator_router
+from routers import hitl as hitl_router
+from routers import settings as settings_router
 from workers import process_thread as process_thread_router
 
 logging.basicConfig(
@@ -96,6 +100,10 @@ api_router.include_router(ingestion_router.router)
 api_router.include_router(sse_router.router)
 api_router.include_router(audit_router.router)
 api_router.include_router(deals_router.router)
+api_router.include_router(guardian_router.router)
+api_router.include_router(orchestrator_router.router)
+api_router.include_router(hitl_router.router)
+api_router.include_router(settings_router.router)
 
 
 @api_router.get("/")
@@ -143,6 +151,11 @@ async def on_startup():
         print("DEBUG: Checking indexes...")
         await create_indexes(db)
         print("DEBUG: Indexes verified!")
+        
+        print("DEBUG: Starting change streams...")
+        from database.change_streams import start_change_streams
+        await start_change_streams(db)
+        print("DEBUG: Change streams started!")
         
         print("DEBUG: Running seed function...")
         seeded = await seed_niche_graph(db)
