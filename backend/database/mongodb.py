@@ -1,10 +1,14 @@
 """MongoDB singleton connection, collection references, and index creation."""
 
-from typing import Optional
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from typing import Optional, TYPE_CHECKING
 import logging
 
 from config import settings
+
+# This prevents the Uvicorn/Motor event loop deadlock on Windows.
+# It allows your IDE to still see the types, but hides them from Python at runtime.
+if TYPE_CHECKING:
+    from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 logger = logging.getLogger(__name__)
 
@@ -28,17 +32,23 @@ COLLECTION_NAMES = [
 
 
 class MongoDBSingleton:
-    _client: Optional[AsyncIOMotorClient] = None
-    _db: Optional[AsyncIOMotorDatabase] = None
+    _client: Optional["AsyncIOMotorClient"] = None
+    _db: Optional["AsyncIOMotorDatabase"] = None
 
     @classmethod
-    def get_client(cls) -> AsyncIOMotorClient:
+    def get_client(cls) -> "AsyncIOMotorClient":
+        # LAZY IMPORT: Only imported exactly when the connection is made
+        from motor.motor_asyncio import AsyncIOMotorClient
+        
         if cls._client is None:
-            cls._client = AsyncIOMotorClient(settings.MONGO_URL)
+            cls._client = AsyncIOMotorClient(
+                settings.MONGO_URL,
+                serverSelectionTimeoutMS=5000
+            )
         return cls._client
 
     @classmethod
-    def get_db(cls) -> AsyncIOMotorDatabase:
+    def get_db(cls) -> "AsyncIOMotorDatabase":
         if cls._db is None:
             cls._db = cls.get_client()[settings.DB_NAME]
         return cls._db
@@ -51,11 +61,11 @@ class MongoDBSingleton:
             cls._db = None
 
 
-def get_db() -> AsyncIOMotorDatabase:
+def get_db() -> "AsyncIOMotorDatabase":
     return MongoDBSingleton.get_db()
 
 
-def get_db_singleton() -> AsyncIOMotorDatabase:
+def get_db_singleton() -> "AsyncIOMotorDatabase":
     """Application-scoped Motor database for background tasks and workers.
 
     Use this in background tasks and Cloud Tasks workers — NOT in request handlers
@@ -65,7 +75,7 @@ def get_db_singleton() -> AsyncIOMotorDatabase:
     return MongoDBSingleton.get_db()
 
 
-async def ensure_collections(db: AsyncIOMotorDatabase) -> None:
+async def ensure_collections(db: "AsyncIOMotorDatabase") -> None:
     """Create any missing collections (MongoDB lazy-creates on write, but we want
     them visible from day one so Atlas UI shows all 10)."""
     existing = await db.list_collection_names()
@@ -75,7 +85,7 @@ async def ensure_collections(db: AsyncIOMotorDatabase) -> None:
             logger.info("Created collection: %s", name)
 
 
-async def create_indexes(db: AsyncIOMotorDatabase) -> None:
+async def create_indexes(db: "AsyncIOMotorDatabase") -> None:
     """Create all indexes required by ThreadComb."""
     # creators
     await db.creators.create_index("creator_id", unique=True)

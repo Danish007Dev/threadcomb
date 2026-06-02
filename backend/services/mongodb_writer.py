@@ -6,12 +6,14 @@ else in the codebase. This module is the single chokepoint.
 """
 
 from datetime import datetime, timezone
-from typing import Optional, Any
+from typing import Optional, Any, TYPE_CHECKING
 import logging
 
-from motor.motor_asyncio import AsyncIOMotorCollection
-
 from models.common import DataClassificationTier
+
+# Lazy import to prevent Uvicorn/Motor deadlock on Windows
+if TYPE_CHECKING:
+    from motor.motor_asyncio import AsyncIOMotorCollection
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +50,7 @@ def _serialize_datetimes(doc: dict) -> dict:
 
 
 async def write_with_classification(
-    collection: AsyncIOMotorCollection,
+    collection: "AsyncIOMotorCollection",
     document: dict,
     classification_tier: DataClassificationTier = DataClassificationTier.PERSONAL_IDENTIFIABLE,
     anonymisation_eligible: bool = False,
@@ -81,7 +83,7 @@ async def write_with_classification(
 
 
 async def upsert_with_classification(
-    collection: AsyncIOMotorCollection,
+    collection: "AsyncIOMotorCollection",
     filter_query: dict,
     update_data: dict,
     classification_tier: DataClassificationTier = DataClassificationTier.PERSONAL_IDENTIFIABLE,
@@ -111,7 +113,7 @@ async def upsert_with_classification(
 
 
 async def update_with_classification(
-    collection: AsyncIOMotorCollection,
+    collection: "AsyncIOMotorCollection",
     filter_query: dict,
     update_data: dict,
     classification_tier: DataClassificationTier = DataClassificationTier.PERSONAL_IDENTIFIABLE,

@@ -22,7 +22,7 @@ async def get_inbound_deals(
     Returns all inbound deals for the creator that have a pending draft or need attention.
     Sorted by: unanswered first, then by date descending.
     """
-    creator_id = str(current_creator["_id"])
+    creator_id = current_creator["creator_id"]
     db = get_db_singleton()
 
     deals = await db.deals.find(
@@ -72,7 +72,7 @@ async def generate_deal_draft(
     Triggers Deal Chief pipeline for a specific deal.
     Returns immediately — draft pushed via SSE when ready.
     """
-    creator_id = str(current_creator["_id"])
+    creator_id = current_creator["creator_id"]
     db = get_db_singleton()
 
     deal = await db.deals.find_one(
@@ -97,7 +97,7 @@ async def get_deal_draft(
     current_creator=Depends(get_current_creator),
 ):
     """Returns the latest pending draft for a deal."""
-    creator_id = str(current_creator["_id"])
+    creator_id = current_creator["creator_id"]
     db = get_db_singleton()
 
     draft = await db.deal_drafts.find_one(
@@ -121,7 +121,7 @@ async def approve_deal_draft(
     Creator approves (possibly with edits) and sends the reply.
     ACTION_POLICY: send_email ALWAYS requires creator approval. This endpoint IS that approval.
     """
-    creator_id = str(current_creator["_id"])
+    creator_id = current_creator["creator_id"]
     db = get_db_singleton()
 
     body = await request.json()
@@ -237,7 +237,7 @@ async def reject_deal_draft(
     current_creator=Depends(get_current_creator),
 ):
     """Creator rejects the draft — marks deal as reviewed, no email sent."""
-    creator_id = str(current_creator["_id"])
+    creator_id = current_creator["creator_id"]
     db = get_db_singleton()
     body = await request.json()
     reason = body.get("reason", "")

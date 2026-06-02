@@ -11,12 +11,16 @@ backwards-compatible imports from server.py startup.
 """
 
 import logging
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from typing import TYPE_CHECKING
+
+# Lazy import to prevent Uvicorn/Motor deadlock on Windows
+if TYPE_CHECKING:
+    from motor.motor_asyncio import AsyncIOMotorDatabase
 
 logger = logging.getLogger(__name__)
 
 
-async def seed_niche_graph(db: AsyncIOMotorDatabase) -> int:
+async def seed_niche_graph(db: "AsyncIOMotorDatabase") -> int:
     """No-op. Run `python backend/corpus/ingest.py --folder ./corpus/data/`
     to populate niche_graph from real sources."""
     logger.info(

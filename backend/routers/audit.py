@@ -34,7 +34,7 @@ async def trigger_audit_generation(
     Called automatically when ingestion job reaches QUEUED_FOR_EXTRACTION
     and all threads are extracted. Also callable manually.
     """
-    if str(current_creator["_id"]) != creator_id and current_creator.get("creator_id") != creator_id:
+    if current_creator.get("creator_id") != creator_id:
         raise HTTPException(status_code=403)
 
     background_tasks.add_task(run_audit_generation, creator_id=creator_id)
@@ -48,7 +48,7 @@ async def get_audit_report(
     current_creator=Depends(get_current_creator),
 ):
     """Returns the latest audit report for a creator."""
-    if str(current_creator["_id"]) != creator_id and current_creator.get("creator_id") != creator_id:
+    if current_creator.get("creator_id") != creator_id:
         raise HTTPException(status_code=403)
 
     db = get_db_singleton()
