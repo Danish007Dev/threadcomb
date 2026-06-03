@@ -38,7 +38,7 @@ async def publish_sse_event(creator_id: str, event_data: dict) -> None:
 
 
 # Events that should terminate the SSE stream (the client got what it came for).
-_TERMINAL_EVENTS = {"gate_complete", "ingestion_error", "ingestion_complete", "audit_complete"}
+_TERMINAL_EVENTS = {"gate_complete", "ingestion_error", "ingestion_complete", "audit_complete", "ingestion_failed", "ingestion_rate_limited"}
 
 
 async def subscribe_sse(creator_id: str) -> AsyncGenerator[str, None]:

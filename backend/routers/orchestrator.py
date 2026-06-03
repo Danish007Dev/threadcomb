@@ -19,7 +19,7 @@ async def orchestrate_sse(
     Query param: ?input=<natural language command>
     The frontend opens an EventSource to this endpoint.
     """
-    creator_id = str(current_creator["_id"])
+    creator_id = current_creator["creator_id"]
     db = get_db_singleton()
 
     async def generate():
@@ -48,7 +48,7 @@ async def orchestrate_command(
     Non-streaming version for mobile clients or when SSE is unavailable.
     Returns a summary of what was dispatched.
     """
-    creator_id = str(current_creator["_id"])
+    creator_id = current_creator["creator_id"]
     db = get_db_singleton()
     body = await request.json()
     user_input = body.get("input", "")

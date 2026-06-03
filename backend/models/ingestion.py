@@ -36,6 +36,7 @@ class GateDecision(str, Enum):
     LOW_CONFIDENCE = "low_confidence"
     SPAM_DETECTED = "spam_detected"
     HINDI_MIXED = "hindi_mixed"
+    RATE_LIMITED = "rate_limited"
 
 
 class ThreadJobStatus(BaseModel):
@@ -62,6 +63,7 @@ class IngestionJob(BaseModel):
     threads_queued_for_extraction: int = 0
     threads_extraction_complete: int = 0
     threads_errored: int = 0
+    threads_rate_limited: int = 0
     # NOTE: thread_statuses is an embedded array for hackathon phase.
     # TODO (Month 2): move to separate thread_job_statuses collection,
     # one document per thread, to avoid document growth at scale.

@@ -125,23 +125,49 @@ async def orchestrate(
         # Step 2: LLM routing for ambiguous input
         agent, confidence = await route_with_llm(user_input)
 
+    agent_descriptions = {
+        "dna_reader": "Email Audit — scans your Gmail for brand deal signals and builds your Skills Map",
+        "deal_chief": "Deal Manager — checks for unanswered brand deals and drafts replies",
+        "revenue_guardian": "Invoice Guardian — finds overdue invoices and drafts follow-up emails",
+        "all": "All agents — running Email Audit, Deal Manager, and Invoice Guardian",
+    }
+
     yield {
         "event": "routing_complete",
         "agent": agent,
         "confidence": confidence,
-        "message": f"Routing to {'all agents' if agent == 'all' else agent.replace('_', ' ').title()}...",
+        "message": f"Routing to {agent_descriptions.get(agent, agent)}...",
     }
+
+    dispatched_agents = []
 
     # Step 3: Execute the routed agent(s)
     if agent == "dna_reader" or agent == "all":
-        yield {"event": "agent_start", "agent": "dna_reader", "message": "DNA Reader: scanning your email history..."}
-        from routers.ingestion import run_full_ingestion
-        # Trigger ingestion (non-blocking — progress via SSE on ingestion channel)
-        asyncio.create_task(run_full_ingestion(creator_id=creator_id, job_id="orchestrated"))
-        yield {"event": "agent_dispatched", "agent": "dna_reader", "message": "DNA Reader is running. Progress on the audit panel."}
+        yield {"event": "agent_start", "agent": "dna_reader", "message": "Email Audit: scanning your Gmail for brand deal signals..."}
+
+        # Create a real ingestion job to avoid ObjectId crash
+        try:
+            from models.ingestion import IngestionJob, IngestionTrigger
+            from bson import ObjectId
+            job = IngestionJob(
+                creator_id=creator_id,
+                trigger=IngestionTrigger.MANUAL,
+                sse_channel=creator_id,
+            )
+            job_doc = job.model_dump()
+            result = await db.ingestion_jobs.insert_one(job_doc)
+            real_job_id = str(result.inserted_id)
+
+            from routers.ingestion import run_full_ingestion
+            asyncio.create_task(run_full_ingestion(creator_id=creator_id, job_id=real_job_id))
+            dispatched_agents.append("Email Audit")
+            yield {"event": "agent_dispatched", "agent": "dna_reader", "message": "Email Audit is running. Progress will appear on the dashboard."}
+        except Exception as e:
+            logger.error(f"Orchestrator failed to start ingestion: {e}")
+            yield {"event": "agent_error", "agent": "dna_reader", "message": f"Could not start audit: {str(e)[:100]}"}
 
     if agent == "deal_chief" or agent == "all":
-        yield {"event": "agent_start", "agent": "deal_chief", "message": "Deal Chief: checking inbound brand deals..."}
+        yield {"event": "agent_start", "agent": "deal_chief", "message": "Deal Manager: checking for unanswered brand deals..."}
         # Get unanswered deals and trigger drafts
         unanswered = await db.deals.count_documents({
             "creator_id": creator_id,
@@ -162,11 +188,12 @@ async def orchestrate(
                         creator_id=creator_id,
                     )
                 )
+            dispatched_agents.append("Deal Manager")
         else:
             yield {"event": "agent_result", "agent": "deal_chief", "message": "No unanswered brand deals right now."}
 
     if agent == "revenue_guardian" or agent == "all":
-        yield {"event": "agent_start", "agent": "revenue_guardian", "message": "Revenue Guardian: checking overdue invoices..."}
+        yield {"event": "agent_start", "agent": "revenue_guardian", "message": "Invoice Guardian: checking for overdue payments..."}
         overdue_count = await db.invoices.count_documents({
             "creator_id": creator_id,
             "status": {"$in": ["pending", "overdue"]},
@@ -176,11 +203,20 @@ async def orchestrate(
             yield {"event": "agent_result", "agent": "revenue_guardian", "message": f"Found {overdue_count} overdue invoice{'s' if overdue_count > 1 else ''}. Preparing follow-ups..."}
             from services.revenue_guardian import run_revenue_guardian
             asyncio.create_task(run_revenue_guardian(creator_id=creator_id))
+            dispatched_agents.append("Invoice Guardian")
         else:
             yield {"event": "agent_result", "agent": "revenue_guardian", "message": "No overdue invoices. All payments on track."}
+
+    # Build a specific completion message
+    if dispatched_agents:
+        running_text = ", ".join(dispatched_agents)
+        message = f"{running_text} {'is' if len(dispatched_agents) == 1 else 'are'} running in the background. Results will update on the dashboard as they complete."
+    else:
+        message = "Nothing to do right now — no pending deals, overdue invoices, or new emails to scan."
 
     yield {
         "event": "orchestration_complete",
         "agent": agent,
-        "message": "Done. Check each section for updates.",
+        "message": message,
     }
+

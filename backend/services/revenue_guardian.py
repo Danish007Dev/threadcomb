@@ -182,12 +182,15 @@ async def generate_followup_drafts(
         follow_up_count = invoice.get("follow_ups", {}).get("count", 0)
 
         # Build context for the draft
+        due_date = invoice.get("due_date", "")
+        if hasattr(due_date, "isoformat"):
+            due_date = due_date.strftime("%B %d, %Y")
         invoice_context = {
             "brand_name": brand_name,
             "amount_inr": f"₹{amount:,.0f}" if amount else "the agreed amount",
             "days_overdue": days,
             "follow_up_count": follow_up_count,
-            "due_date": invoice.get("due_date", ""),
+            "due_date": str(due_date),
             "payment_deadline": (datetime.utcnow() + timedelta(
                 days=5 if tone == "final_notice" else 7
             )).strftime("%B %d, %Y"),

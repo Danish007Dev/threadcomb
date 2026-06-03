@@ -10,6 +10,7 @@ obvious junk.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -94,8 +95,11 @@ async def classify_thread_gate(
 ) -> GateClassificationResult:
     """Run the Stage 0 gate on a sanitised thread.
 
-    Never raises — returns a LOW_CONFIDENCE result on any error.
+    Never raises — returns a LOW_CONFIDENCE or RATE_LIMITED result on error.
+    Retries 429 errors with exponential backoff.
     """
+    from config import settings
+
     thread_id = sanitised_thread.thread_id
 
     # 1) Deterministic spam check — zero LLM cost.
@@ -126,27 +130,64 @@ async def classify_thread_gate(
             tokens_used=0,
         )
 
-    # 3) LLM gate classification.
+    # 3) LLM gate classification with retry on 429.
     gate_input = (
         f"Subject: {sanitised_thread.subject}\n"
         f"Sender: {sanitised_thread.sender_email}\n"
         f"Thread preview: {sanitised_thread.sanitised_text[:600]}"
     )
 
-    try:
-        # gemini_client is our singleton wrapper from services.gemini_client.
-        # send_json calls Gemini Flash-Lite and parses the response JSON.
-        parsed = await gemini_client.send_json(
-            system_message=GATE_SYSTEM_PROMPT,
-            user_message=gate_input,
-            model=GATE_MODEL,
-        )
-    except json.JSONDecodeError as exc:
-        logger.error("Gate JSON parse error for %s: %s", thread_id, exc)
-        return _low_confidence_result(thread_id, f"JSON parse error: {str(exc)[:50]}")
-    except Exception as exc:  # noqa: BLE001
-        logger.error("Gate classification failed for %s: %s", thread_id, exc)
-        return _low_confidence_result(thread_id, f"Error: {str(exc)[:80]}")
+    max_retries = getattr(settings, "GATE_MAX_RETRIES", 3)
+    parsed = None
+    last_error = None
+
+    for attempt in range(max_retries + 1):
+        try:
+            parsed = await gemini_client.send_json(
+                system_message=GATE_SYSTEM_PROMPT,
+                user_message=gate_input,
+                model=GATE_MODEL,
+            )
+            last_error = None
+            break  # success
+        except json.JSONDecodeError as exc:
+            logger.error("Gate JSON parse error for %s: %s", thread_id, exc)
+            return _low_confidence_result(thread_id, f"JSON parse error: {str(exc)[:50]}")
+        except Exception as exc:
+            last_error = exc
+            error_str = str(exc)
+            is_rate_limited = "429" in error_str or "Too Many Requests" in error_str
+
+            if is_rate_limited and attempt < max_retries:
+                # Exponential backoff: 5s, 15s, 45s
+                backoff = 5 * (3 ** attempt)
+                logger.warning(
+                    "Gate 429 for %s (attempt %d/%d). Backing off %ds.",
+                    thread_id, attempt + 1, max_retries, backoff
+                )
+                await asyncio.sleep(backoff)
+                continue
+            elif is_rate_limited:
+                logger.error(
+                    "Gate 429 for %s — all %d retries exhausted.", thread_id, max_retries
+                )
+                return GateClassificationResult(
+                    thread_id=thread_id,
+                    is_deal_signal=False,
+                    is_spam=False,
+                    language="en",
+                    hindi_mode=False,
+                    confidence=0.0,
+                    gate_decision=GateDecision.RATE_LIMITED,
+                    reasoning_brief=f"API rate limited after {max_retries} retries",
+                    tokens_used=0,
+                )
+            else:
+                logger.error("Gate classification failed for %s: %s", thread_id, exc)
+                return _low_confidence_result(thread_id, f"Error: {str(exc)[:80]}")
+
+    if parsed is None:
+        return _low_confidence_result(thread_id, "Classification returned no result")
 
     is_deal = bool(parsed.get("is_deal_signal", False))
     is_spam = bool(parsed.get("is_spam", False))

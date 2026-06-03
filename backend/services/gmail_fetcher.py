@@ -22,19 +22,29 @@ DEAL_SIGNAL_QUERY = (
 )
 
 THREAD_FETCH_RATE_LIMIT_SECONDS = 1.0
-MAX_THREADS_PER_FULL_INGEST = 600
 MAX_THREAD_CHARS = 16000
+
+
+def _get_max_threads() -> int:
+    """Get max threads from config, with a safe fallback."""
+    try:
+        from config import settings
+        return settings.MAX_INGESTION_THREADS
+    except Exception:
+        return 50  # safe default
 
 
 async def fetch_thread_ids(
     credentials,
     query: str = DEAL_SIGNAL_QUERY,
-    max_results: int = MAX_THREADS_PER_FULL_INGEST,
+    max_results: int = None,
 ) -> Tuple[List[str], int]:
     """Fetch thread IDs matching a Gmail query, paginated.
 
     Returns (thread_ids, total_estimate).
     """
+    if max_results is None:
+        max_results = _get_max_threads()
     service = build("gmail", "v1", credentials=credentials, cache_discovery=False)
     thread_ids: List[str] = []
     page_token: Optional[str] = None

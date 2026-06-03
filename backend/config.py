@@ -54,5 +54,26 @@ class Settings:
     WORKER_BASE_URL: str = os.environ.get("WORKER_BASE_URL", "")
     WORKER_SECRET: str = os.environ.get("WORKER_SECRET", "")
 
+    # Gemini rate limiting — controls ingestion pipeline throttling
+    # "free" = 15 RPM (default), "paid" = 1000+ RPM
+    GEMINI_TIER: str = os.environ.get("GEMINI_TIER", "free")
+
+    @property
+    def MAX_INGESTION_THREADS(self) -> int:
+        override = os.environ.get("MAX_INGESTION_THREADS")
+        if override:
+            return int(override)
+        return 50 if self.GEMINI_TIER == "free" else 600
+
+    @property
+    def GATE_SLEEP_SECONDS(self) -> float:
+        override = os.environ.get("GATE_SLEEP_SECONDS")
+        if override:
+            return float(override)
+        return 4.0 if self.GEMINI_TIER == "free" else 0.5
+
+    # Max retries for Gemini 429 errors before giving up on a thread
+    GATE_MAX_RETRIES: int = int(os.environ.get("GATE_MAX_RETRIES", "3"))
+
 
 settings = Settings()

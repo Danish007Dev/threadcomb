@@ -76,15 +76,11 @@ async def find_similar_deals(
         {
             "$project": {
                 "embedding_vector": 0,     # exclude the vector from results
+            }
+        },
+        {
+            "$addFields": {
                 "score": {"$meta": "vectorSearchScore"},
-                "deal_type": 1,
-                "status": 1,
-                "financials.amount_inr": 1,
-                "financials.amount_ambiguity_flag": 1,
-                "raw_signals.deliverables": 1,
-                "raw_signals.exclusivity_mentioned": 1,
-                "raw_signals.payment_terms_mentioned": 1,
-                "brand_id": 1,
             }
         }
     ]

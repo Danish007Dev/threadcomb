@@ -19,7 +19,7 @@ async def trigger_guardian(
     current_creator=Depends(get_current_creator),
 ):
     """Manually triggers Revenue Guardian. Also called by Cloud Scheduler."""
-    creator_id = str(current_creator["_id"])
+    creator_id = current_creator["creator_id"]
     background_tasks.add_task(run_revenue_guardian, creator_id=creator_id)
     return {"status": "running", "message": "Checking your invoices..."}
 
@@ -55,7 +55,7 @@ async def approve_followup_batch(
     Body: {approved_invoice_ids: ["id1", "id2"], skipped_invoice_ids: ["id3"]}
     Sends approved follow-ups and updates invoice records.
     """
-    creator_id = str(current_creator["_id"])
+    creator_id = current_creator["creator_id"]
     db = get_db_singleton()
     body = await request.json()
 
@@ -111,7 +111,7 @@ async def approve_single_followup(
     current_creator=Depends(get_current_creator),
 ):
     """Approves and sends a single follow-up."""
-    creator_id = str(current_creator["_id"])
+    creator_id = current_creator["creator_id"]
     db = get_db_singleton()
     body = await request.json()
     final_text = body.get("final_text")
@@ -363,7 +363,7 @@ async def weekly_digest_all(
     
     for creator in active_creators:
         try:
-            creator_id = str(creator["_id"])
+            creator_id = creator.get("creator_id", str(creator["_id"]))
             await weekly_digest(creator_id, request)
         except Exception as e:
             logger.error(f"Failed to generate weekly digest for {creator_id}: {e}")

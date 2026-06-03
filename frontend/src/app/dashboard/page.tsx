@@ -39,12 +39,12 @@ import { ActivityFeedWidget } from './components/ActivityFeedWidget';
 const NAV = [
   { label: 'Dashboard', Icon: LayoutDashboard, href: '/dashboard', active: true, testId: 'sidebar-link-dashboard' },
   { label: 'Deals', Icon: Handshake, href: '/dashboard/deals', active: false, testId: 'sidebar-link-deals' },
-  { label: 'Invoices', Icon: ReceiptText, href: '#', active: false, testId: 'sidebar-link-invoices' },
-  { label: 'Reports', Icon: BarChart3, href: '#', active: false, testId: 'sidebar-link-reports' },
-  { label: 'Settings', Icon: Settings, href: '#', active: false, testId: 'sidebar-link-settings' },
+  { label: 'Invoices', Icon: ReceiptText, href: '/dashboard/invoices', active: false, testId: 'sidebar-link-invoices' },
+  { label: 'Reports', Icon: BarChart3, href: '/dashboard/reports', active: false, testId: 'sidebar-link-reports' },
+  { label: 'Settings', Icon: Settings, href: '/dashboard/settings', active: false, testId: 'sidebar-link-settings' },
 ];
 
-type DashboardState = 'no_gmail' | 'ready' | 'running' | 'complete';
+type DashboardState = 'no_gmail' | 'ready' | 'running' | 'complete' | 'failed';
 
 const SEVERITY_CONFIG: Record<string, { color: string; bgColor: string; Icon: typeof AlertTriangle }> = {
   high: { color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900', Icon: AlertTriangle },
@@ -85,14 +85,12 @@ export default function DashboardPage() {
   useEffect(() => {
     const completeEvent = events.find(e => e.event === 'audit_complete');
     if (completeEvent && creator) {
-      // Fetch the audit report
       getAuditReport(creator.creator_id)
         .then(report => {
           setAuditReport(report);
           setDashboardState('complete');
         })
         .catch(() => {
-          // If report isn't ready yet, try again in a few seconds
           setTimeout(() => {
             if (creator) {
               getAuditReport(creator.creator_id)
@@ -105,7 +103,14 @@ export default function DashboardPage() {
           }, 5000);
         });
     }
-  }, [events, creator]);
+    // Detect failure events
+    const failEvent = events.find(
+      e => e.event === 'ingestion_failed' || e.event === 'ingestion_rate_limited'
+    );
+    if (failEvent && dashboardState === 'running') {
+      setDashboardState('failed');
+    }
+  }, [events, creator, dashboardState]);
 
   useEffect(() => {
     let cancelled = false;
@@ -197,7 +202,6 @@ export default function DashboardPage() {
               onClick={(e) => {
                 if (href === '#') {
                   e.preventDefault();
-                  alert(`The ${label} page is not built for this prototype. Its functionality is integrated into the Dashboard widgets.`);
                 }
               }}
               className={cn(
@@ -255,6 +259,15 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            data-testid="header-logout-btn"
+            className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            title="Log out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </header>
 
         <main className="flex-1 px-6 py-8 md:px-10 tc-grain overflow-y-auto">
@@ -359,6 +372,21 @@ export default function DashboardPage() {
               <IngestionProgress
                 creatorId={creator.creator_id}
                 jobId={jobId}
+                onRetry={handleStartAudit}
+              />
+            </div>
+          )}
+
+          {/* State 3b: Audit failed */}
+          {dashboardState === 'failed' && creator && jobId && (
+            <div className="max-w-2xl mx-auto space-y-4">
+              <IngestionProgress
+                creatorId={creator.creator_id}
+                jobId={jobId}
+                onRetry={() => {
+                  setDashboardState('ready');
+                  setJobId(null);
+                }}
               />
             </div>
           )}

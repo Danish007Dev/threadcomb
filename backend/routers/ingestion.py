@@ -282,10 +282,39 @@ async def run_full_ingestion(creator_id: str, job_id: str) -> None:
         passed_gate = 0
         failed_gate = 0
         hitl_count = 0
+        rate_limited_count = 0
+        consecutive_rate_limits = 0
         enqueue_delay = 0
         max_enqueue_delay = 60
 
+        # Use configurable sleep for rate limiting
+        gate_sleep = settings.GATE_SLEEP_SECONDS
+
         for index, thread_id in enumerate(thread_ids):
+            # Circuit breaker: if too many consecutive rate limits, stop early
+            if consecutive_rate_limits >= 5:
+                logger.error(
+                    "Stopping ingestion for %s: %d consecutive rate limits.",
+                    creator_id, consecutive_rate_limits,
+                )
+                await publish_sse_event(
+                    creator_id,
+                    {
+                        "event": "ingestion_rate_limited",
+                        "message": (
+                            f"The AI service is overloaded. "
+                            f"Processed {index} of {len(thread_ids)} emails before hitting rate limits. "
+                            f"{passed_gate} brand deal threads found so far."
+                        ),
+                        "processed": index,
+                        "total": len(thread_ids),
+                        "passed": passed_gate,
+                        "rate_limited": rate_limited_count,
+                        "can_retry": True,
+                    },
+                )
+                break
+
             raw_thread = await fetch_thread_content(credentials, thread_id)
             if not raw_thread:
                 await increment_job_counter(db, job_id, "threads_errored")
@@ -324,7 +353,13 @@ async def run_full_ingestion(creator_id: str, job_id: str) -> None:
                 },
             )
 
-            if gate_result.gate_decision in (GateDecision.DEAL_SIGNAL, GateDecision.HINDI_MIXED):
+            if gate_result.gate_decision == GateDecision.RATE_LIMITED:
+                rate_limited_count += 1
+                consecutive_rate_limits += 1
+                await increment_job_counter(db, job_id, "threads_rate_limited")
+
+            elif gate_result.gate_decision in (GateDecision.DEAL_SIGNAL, GateDecision.HINDI_MIXED):
+                consecutive_rate_limits = 0  # reset on success
                 delay = min(enqueue_delay, max_enqueue_delay)
                 await enqueue_thread_for_extraction(
                     thread_id=thread_id,
@@ -351,6 +386,7 @@ async def run_full_ingestion(creator_id: str, job_id: str) -> None:
                 await increment_job_counter(db, job_id, "threads_queued_for_extraction")
 
             elif gate_result.gate_decision == GateDecision.LOW_CONFIDENCE:
+                consecutive_rate_limits = 0
                 await write_with_classification(
                     db.agent_actions,
                     {
@@ -375,10 +411,11 @@ async def run_full_ingestion(creator_id: str, job_id: str) -> None:
                 hitl_count += 1
                 await increment_job_counter(db, job_id, "threads_low_confidence")
             else:
+                consecutive_rate_limits = 0
                 failed_gate += 1
                 await increment_job_counter(db, job_id, "threads_failed_gate")
 
-            if index % 10 == 0:
+            if index % 5 == 0:
                 await publish_sse_event(
                     creator_id,
                     {
@@ -386,31 +423,74 @@ async def run_full_ingestion(creator_id: str, job_id: str) -> None:
                         "message": f"Analysed {index + 1} of {len(thread_ids)} emails...",
                         "passed": passed_gate,
                         "failed": failed_gate,
+                        "rate_limited": rate_limited_count,
                         "total": len(thread_ids),
                     },
                 )
 
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(gate_sleep)
 
-        final_status = (
-            IngestionStatus.QUEUED_FOR_EXTRACTION if passed_gate > 0 else IngestionStatus.FAILED
-        )
+        # Determine final status
+        if rate_limited_count > 0 and passed_gate == 0:
+            final_status = IngestionStatus.FAILED
+            failure_reason = "rate_limited"
+        elif passed_gate > 0:
+            final_status = IngestionStatus.QUEUED_FOR_EXTRACTION
+            failure_reason = None
+        else:
+            final_status = IngestionStatus.FAILED
+            failure_reason = "no_deals_found"
+
         await update_job_status(db, job_id, final_status)
 
-        eta_minutes = max(1, round(passed_gate / 5))
-        await publish_sse_event(
-            creator_id,
-            {
-                "event": "gate_complete",
-                "message": (
-                    f"Found {passed_gate} brand deal threads. "
-                    f"Your audit will be ready in approximately {eta_minutes} minutes."
-                ),
-                "passed_gate": passed_gate,
-                "failed_gate": failed_gate,
-                "hitl_queue": hitl_count,
-            },
-        )
+        if failure_reason == "rate_limited":
+            await publish_sse_event(
+                creator_id,
+                {
+                    "event": "ingestion_failed",
+                    "reason": "rate_limited",
+                    "message": (
+                        "The AI service hit its rate limit. "
+                        f"Only {len(thread_ids) - rate_limited_count} of {len(thread_ids)} "
+                        "emails could be analysed. Try again in a few minutes."
+                    ),
+                    "can_retry": True,
+                    "passed_gate": passed_gate,
+                    "rate_limited": rate_limited_count,
+                },
+            )
+        elif failure_reason == "no_deals_found":
+            await publish_sse_event(
+                creator_id,
+                {
+                    "event": "ingestion_failed",
+                    "reason": "no_deals_found",
+                    "message": (
+                        f"Analysed {len(thread_ids)} emails but found no brand deal threads. "
+                        "This might mean your inbox doesn't have deal-related emails in the last 6 months, "
+                        "or the filter needs adjusting."
+                    ),
+                    "can_retry": True,
+                    "passed_gate": 0,
+                    "total_analysed": len(thread_ids),
+                },
+            )
+        else:
+            eta_minutes = max(1, round(passed_gate / 5))
+            await publish_sse_event(
+                creator_id,
+                {
+                    "event": "gate_complete",
+                    "message": (
+                        f"Found {passed_gate} brand deal threads. "
+                        f"Your audit will be ready in approximately {eta_minutes} minutes."
+                    ),
+                    "passed_gate": passed_gate,
+                    "failed_gate": failed_gate,
+                    "hitl_queue": hitl_count,
+                    "rate_limited": rate_limited_count,
+                },
+            )
 
         # ── First Signal — immediate value before full audit ────────────
         job_doc = await db.ingestion_jobs.find_one({"_id": ObjectId(job_id)})
@@ -421,13 +501,14 @@ async def run_full_ingestion(creator_id: str, job_id: str) -> None:
             )
 
         # ── Voice profiling — runs async, not needed for audit ──────────
-        await publish_sse_event(creator_id, {
-            "event": "voice_profiling",
-            "message": "Learning your communication style...",
-        })
-        from services.voice_profiler import run_voice_profiling
-        # Fire and forget — voice profile not needed for the Audit Report
-        asyncio.create_task(run_voice_profiling(creator_id=creator_id))
+        if passed_gate > 0:
+            await publish_sse_event(creator_id, {
+                "event": "voice_profiling",
+                "message": "Learning your communication style...",
+            })
+            from services.voice_profiler import run_voice_profiling
+            # Fire and forget — voice profile not needed for the Audit Report
+            asyncio.create_task(run_voice_profiling(creator_id=creator_id))
 
     except Exception as exc:  # noqa: BLE001
         logger.error("Ingestion error for creator %s: %s", creator_id, exc, exc_info=True)
@@ -435,8 +516,10 @@ async def run_full_ingestion(creator_id: str, job_id: str) -> None:
         await publish_sse_event(
             creator_id,
             {
-                "event": "ingestion_error",
-                "message": "Something went wrong. Our team has been notified.",
+                "event": "ingestion_failed",
+                "reason": "error",
+                "message": f"Something went wrong during the audit: {str(exc)[:200]}",
+                "can_retry": True,
             },
         )
 

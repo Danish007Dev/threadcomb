@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 @router.get("/hitl/queue")
 async def get_hitl_queue(request: Request, current_creator=Depends(get_current_creator)):
     """Returns items pending human review."""
-    creator_id = str(current_creator["_id"])
+    creator_id = current_creator["creator_id"]
     db = get_db_singleton()
     items = await db.agent_actions.find(
         {
@@ -32,7 +32,7 @@ async def get_hitl_queue(request: Request, current_creator=Depends(get_current_c
 @router.post("/hitl/resolve/{action_id}")
 async def resolve_hitl_item(action_id: str, request: Request, current_creator=Depends(get_current_creator)):
     """Resolves a HITL queue item — either triggers extraction or discards."""
-    creator_id = str(current_creator["_id"])
+    creator_id = current_creator["creator_id"]
     db = get_db_singleton()
     body = await request.json()
     resolution = body.get("resolution")  # "extract" or "discard"
@@ -71,7 +71,7 @@ async def get_all_activity(
     current_creator=Depends(get_current_creator)
 ):
     """Returns all agent actions with optional filtering."""
-    creator_id = str(current_creator["_id"])
+    creator_id = current_creator["creator_id"]
     db = get_db_singleton()
     
     query = {"creator_id": creator_id}

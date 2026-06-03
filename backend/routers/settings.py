@@ -33,7 +33,7 @@ async def export_skills_map(request: Request, current_creator=Depends(get_curren
     Exports the creator's complete Skills Map as JSON.
     DPDP data portability right — must work correctly.
     """
-    creator_id = str(current_creator["_id"])
+    creator_id = current_creator["creator_id"]
     db = get_db_singleton()
 
     export = {
@@ -74,7 +74,7 @@ async def delete_account(request: Request, current_creator=Depends(get_current_c
     Deletes all personal_identifiable documents across all collections.
     Anonymised aggregate contributions to niche_graph are NOT deleted (legitimate basis).
     """
-    creator_id = str(current_creator["_id"])
+    creator_id = current_creator["creator_id"]
     db = get_db_singleton()
 
     collections_to_purge = [

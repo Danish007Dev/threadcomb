@@ -257,3 +257,70 @@ export async function rejectDeal(dealId: string, reason: string = ''): Promise<{
   });
 }
 
+// ---------- Guardian / Invoices (Session 5) ----------
+
+export interface InvoiceFollowupDraft {
+  invoice_id: string;
+  brand_name: string;
+  amount_inr: number;
+  days_overdue: number;
+  tone: string;
+  draft_text: string;
+  creator_action?: string | null;
+  sent_at?: string | null;
+}
+
+export interface PendingFollowups {
+  _id: string;
+  creator_id: string;
+  run_date: string;
+  drafts: InvoiceFollowupDraft[];
+  total_overdue: number;
+  total_sent?: number;
+}
+
+export async function getGuardianPending(): Promise<PendingFollowups> {
+  return request('/guardian/pending');
+}
+
+export async function triggerGuardianRun(): Promise<{ status: string; message: string }> {
+  return request('/guardian/run', { method: 'POST' });
+}
+
+export async function approveFollowupBatch(
+  approvedIds: string[],
+  skippedIds: string[] = []
+): Promise<{ status: string; sent: number; skipped: number }> {
+  return request('/guardian/approve-batch', {
+    method: 'POST',
+    body: JSON.stringify({
+      approved_invoice_ids: approvedIds,
+      skipped_invoice_ids: skippedIds,
+    }),
+  });
+}
+
+export async function approveSingleFollowup(
+  invoiceId: string,
+  finalText?: string
+): Promise<{ status: string; invoice_id: string }> {
+  return request(`/guardian/approve-single/${invoiceId}`, {
+    method: 'POST',
+    body: JSON.stringify({ final_text: finalText || null }),
+  });
+}
+
+// ---------- Settings (Session 5) ----------
+
+export async function exportSkillsMap(): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/settings/export`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.blob();
+}
+
+export async function deleteAccount(): Promise<{ status: string; message: string; deletion_counts: Record<string, number> }> {
+  return request('/settings/delete-account', { method: 'DELETE' });
+}
+
