@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/button';
 import { ThreadCombLogo } from '../../components/brand/Logo';
 import { LogIn, ShieldCheck, Sparkles, Inbox } from 'lucide-react';
 import { API_BASE } from '../../lib/api';
+import { ThemeToggle } from '../../components/ThemeToggle';
 
 /**
  * Login page — split layout: brand pitch on the left, abstract artwork on the right.
@@ -24,7 +25,10 @@ export default function LoginPage() {
     >
       {/* Left pane — pitch + sign-in */}
       <div className="flex flex-col px-8 py-10 md:px-16 md:py-14 lg:px-24">
-        <ThreadCombLogo data-testid="login-logo" className="text-primary" />
+        <div className="flex items-center justify-between">
+          <ThreadCombLogo data-testid="login-logo" className="text-primary" />
+          <ThemeToggle />
+        </div>
 
         <div className="flex-1 flex flex-col justify-center max-w-xl mt-12 md:mt-0">
           <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-5">
@@ -40,8 +44,8 @@ export default function LoginPage() {
           </h1>
 
           <p className="mt-6 text-base sm:text-lg text-muted-foreground leading-relaxed max-w-lg">
-            Three AI agents read your Gmail brand deal history, build your operational DNA,
-            and draft replies in your voice. You approve everything before it sends.
+            Three TC's agents read your Gmail brand deal history, build your operational DNA,
+            and draft replies in your voice while keeping you in full control.
           </p>
 
           <div className="mt-10 flex flex-col gap-4 max-w-md">

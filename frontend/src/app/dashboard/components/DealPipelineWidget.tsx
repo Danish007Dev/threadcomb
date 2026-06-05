@@ -47,42 +47,42 @@ export function DealPipelineWidget() {
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Unanswered */}
-        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+        <div className="bg-slate-50 dark:bg-card/40 rounded-xl p-4 border border-slate-100 dark:border-border/60">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-slate-700">Unanswered</span>
-            <span className="bg-red-100 text-red-700 text-xs font-semibold px-2 py-1 rounded-full">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Unanswered</span>
+            <span className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 text-xs font-semibold px-2 py-1 rounded-full">
               {unanswered.length}
             </span>
           </div>
           {unanswered.map((deal) => (
-            <div key={deal._id} className="bg-white p-3 rounded-lg border border-slate-200 mb-2 shadow-sm">
-              <p className="text-sm font-medium">{deal.brand?.name || 'Unknown Brand'}</p>
-              <p className="text-xs text-slate-500 mb-2">₹{deal.financials?.amount_inr?.toLocaleString('en-IN')}</p>
+            <div key={deal._id} className="bg-white dark:bg-card p-3 rounded-lg border border-slate-200 dark:border-border mb-2 shadow-sm dark:shadow-none">
+              <p className="text-sm font-medium text-foreground">{deal.brand?.name || 'Unknown Brand'}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">₹{deal.financials?.amount_inr?.toLocaleString('en-IN')}</p>
               <button
                 onClick={() => router.push('/dashboard/deals')}
-                className="w-full inline-flex justify-center items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded transition-colors"
+                className="w-full inline-flex justify-center items-center gap-2 bg-slate-100 dark:bg-accent/50 hover:bg-slate-200 dark:hover:bg-accent text-slate-700 dark:text-slate-200 text-xs px-3 py-1.5 rounded transition-colors"
               >
                 <PenTool className="w-3.5 h-3.5" /> Generate Draft
               </button>
             </div>
           ))}
           {unanswered.length === 0 && (
-             <p className="text-xs text-slate-400 text-center py-2">No unanswered deals.</p>
+             <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-2">No unanswered deals.</p>
           )}
         </div>
 
         {/* Drafts Pending Approval */}
-        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+        <div className="bg-slate-50 dark:bg-card/40 rounded-xl p-4 border border-slate-100 dark:border-border/60">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-slate-700">Pending Approval</span>
-            <span className="bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-1 rounded-full">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Pending Approval</span>
+            <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-xs font-semibold px-2 py-1 rounded-full">
               {pending.length}
             </span>
           </div>
           {pending.map((deal) => (
-            <div key={deal._id} className="bg-white p-3 rounded-lg border border-amber-200 mb-2 shadow-sm border-l-2 border-l-amber-500">
-              <p className="text-sm font-medium">{deal.brand?.name || 'Unknown Brand'}</p>
-              <p className="text-xs text-slate-500 mb-2">₹{deal.financials?.amount_inr?.toLocaleString('en-IN')}</p>
+            <div key={deal._id} className="bg-white dark:bg-card p-3 rounded-lg border border-amber-200 dark:border-amber-900/50 mb-2 shadow-sm dark:shadow-none border-l-2 border-l-amber-500 dark:border-l-amber-500">
+              <p className="text-sm font-medium text-foreground">{deal.brand?.name || 'Unknown Brand'}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">₹{deal.financials?.amount_inr?.toLocaleString('en-IN')}</p>
               <button
                 onClick={() => router.push('/dashboard/deals')}
                 className="w-full inline-flex justify-center items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded transition-colors"
@@ -92,29 +92,29 @@ export function DealPipelineWidget() {
             </div>
           ))}
           {pending.length === 0 && (
-             <p className="text-xs text-slate-400 text-center py-2">No drafts to review.</p>
+             <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-2">No drafts to review.</p>
           )}
         </div>
 
         {/* In Negotiation */}
-        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+        <div className="bg-slate-50 dark:bg-card/40 rounded-xl p-4 border border-slate-100 dark:border-border/60">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-slate-700">In Negotiation</span>
-            <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-full">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">In Negotiation</span>
+            <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 text-xs font-semibold px-2 py-1 rounded-full">
               {negotiating.length}
             </span>
           </div>
           {negotiating.map((deal) => (
-            <div key={deal._id} className="bg-white p-3 rounded-lg border border-slate-200 mb-2 shadow-sm">
-              <p className="text-sm font-medium">{deal.brand?.name || 'Unknown Brand'}</p>
-              <p className="text-xs text-slate-500 mb-2">₹{deal.financials?.amount_inr?.toLocaleString('en-IN')}</p>
-              <div className="inline-flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+            <div key={deal._id} className="bg-white dark:bg-card p-3 rounded-lg border border-slate-200 dark:border-border mb-2 shadow-sm dark:shadow-none">
+              <p className="text-sm font-medium text-foreground">{deal.brand?.name || 'Unknown Brand'}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">₹{deal.financials?.amount_inr?.toLocaleString('en-IN')}</p>
+              <div className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
                 <Clock className="w-3.5 h-3.5" /> Awaiting Response
               </div>
             </div>
           ))}
           {negotiating.length === 0 && (
-             <p className="text-xs text-slate-400 text-center py-2">No active negotiations.</p>
+             <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-2">No active negotiations.</p>
           )}
         </div>
       </div>

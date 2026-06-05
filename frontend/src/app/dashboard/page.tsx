@@ -31,6 +31,7 @@ import { IngestionProgress } from '../../components/ingestion/IngestionProgress'
 import { FirstSignalCard } from './components/FirstSignalCard';
 import { useIngestionStatus } from '../../hooks/useIngestionStatus';
 import { OrchestratorBar } from '../../components/orchestrator/OrchestratorBar';
+import { ThemeToggle } from '../../components/ThemeToggle';
 import { WeeklyDigestWidget } from './components/WeeklyDigestWidget';
 import { DealPipelineWidget } from './components/DealPipelineWidget';
 import { InvoiceTrackerWidget } from './components/InvoiceTrackerWidget';
@@ -240,34 +241,38 @@ export default function DashboardPage() {
               Dashboard
             </span>
           </div>
-          <div className="flex items-center gap-3" data-testid="header-avatar">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-foreground leading-tight">
-                {creator?.name || 'Creator'}
-              </p>
-              <p className="text-xs text-muted-foreground leading-tight">{creator?.email}</p>
-            </div>
-            {creator?.avatar_url ? (
-              <img
-                src={creator.avatar_url}
-                alt={creator.name || 'avatar'}
-                className="w-10 h-10 rounded-full object-cover border border-border/60"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium">
-                {(creator?.name || creator?.email || 'C').charAt(0).toUpperCase()}
+          <div className="flex items-center gap-5">
+            <ThemeToggle />
+            <div className="flex items-center gap-3" data-testid="header-avatar">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-medium text-foreground leading-tight">
+                  {creator?.name || 'Creator'}
+                </p>
+                <p className="text-xs text-muted-foreground leading-tight">{creator?.email}</p>
               </div>
-            )}
+              {creator?.avatar_url ? (
+                <img
+                  src={creator.avatar_url}
+                  alt={creator.name || 'avatar'}
+                  className="w-10 h-10 rounded-full object-cover border border-border/60 shadow-sm"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium shadow-sm">
+                  {(creator?.name || creator?.email || 'C').charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+            {/* Mobile Logout Button (since sidebar is hidden on mobile) */}
+            <button
+              type="button"
+              onClick={handleLogout}
+              data-testid="mobile-header-logout-btn"
+              className="md:hidden p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+              title="Log out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            data-testid="header-logout-btn"
-            className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-            title="Log out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
         </header>
 
         <main className="flex-1 px-6 py-8 md:px-10 tc-grain overflow-y-auto">

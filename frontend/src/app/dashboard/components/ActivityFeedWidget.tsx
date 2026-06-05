@@ -63,26 +63,26 @@ export function ActivityFeedWidget() {
             statusColor = "text-rose-500";
           }
 
-          let agentColor = "bg-blue-100 text-blue-700";
-          if (action.agent === 'deal_chief') agentColor = "bg-purple-100 text-purple-700";
-          if (action.agent === 'revenue_guardian') agentColor = "bg-rose-100 text-rose-700";
+          let agentColor = "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400";
+          if (action.agent === 'deal_chief') agentColor = "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400";
+          if (action.agent === 'revenue_guardian') agentColor = "bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400";
 
           return (
             <div key={action._id} className="flex gap-4">
               <div className="mt-1">
                 <StatusIcon className={`w-5 h-5 ${statusColor}`} />
               </div>
-              <div className="flex-1 pb-4 border-b border-slate-100 last:border-0 last:pb-0">
+              <div className="flex-1 pb-4 border-b border-slate-100 dark:border-border/60 last:border-0 last:pb-0">
                 <div className="flex items-start justify-between">
                   <div>
                     <span className={`inline-flex px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider mb-1.5 ${agentColor}`}>
                       {action.agent.replace('_', ' ')}
                     </span>
-                    <p className="text-sm font-medium text-slate-900">
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-200">
                       {action.action_type.replace(/_/g, ' ')}
                     </p>
                   </div>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-slate-400 dark:text-slate-500">
                     {action.executed_at ? new Date(action.executed_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric' }) : 'Unknown'}
                   </span>
                 </div>

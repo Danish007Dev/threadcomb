@@ -9,8 +9,7 @@ interface ThreadCombLogoProps {
 }
 
 /**
- * ThreadComb logo — a stylised comb with woven threads.
- * Pure SVG so it scales crisply and inherits the primary color.
+ * ThreadComb logo — user's custom Hexagon envelope SVG.
  */
 export function ThreadCombLogo({
   className,
@@ -22,49 +21,22 @@ export function ThreadCombLogo({
       <svg
         width={size}
         height={size}
-        viewBox="0 0 32 32"
-        fill="none"
+        viewBox="-75 -65 150 130"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
       >
-        {/* Comb back */}
-        <rect
-          x="4"
-          y="6"
-          width="24"
-          height="6"
-          rx="2"
-          stroke="currentColor"
-          strokeWidth="2"
-          fill="hsl(var(--accent))"
-        />
-        {/* Comb teeth */}
-        {[8, 12, 16, 20, 24].map((cx) => (
-          <line
-            key={cx}
-            x1={cx}
-            y1="12"
-            x2={cx}
-            y2="22"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-          />
-        ))}
-        {/* Thread weaving through teeth */}
-        <path
-          d="M6 26 C 10 18, 14 30, 18 22 S 26 28, 28 22"
-          stroke="hsl(var(--terracotta))"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          fill="none"
-        />
+        <polygon points="-30,-52 30,-52 60,0 30,52 -30,52 -60,0" fill="#C4553A"/>
+        <polygon points="-30,-52 30,-52 55.4,-8 0,14 -55.4,-8" fill="#F5A623"/>
+        <line x1="-55.4" y1="-8" x2="0" y2="14" stroke="#9C3E1A" strokeWidth="1.5" opacity="0.4"/>
+        <line x1="55.4" y1="-8" x2="0" y2="14" stroke="#9C3E1A" strokeWidth="1.5" opacity="0.4"/>
+        <polygon points="-30,-52 30,-52 60,0 30,52 -30,52 -60,0" fill="none" strokeWidth="5" strokeLinejoin="round" className="stroke-[#C85C00] dark:stroke-[#F5A623] transition-colors"/>
       </svg>
       {showWordmark && (
-        <span className="font-heading text-lg font-semibold tracking-tight text-foreground">
+        <span className="font-mono text-xl font-bold tracking-tighter text-foreground">
           ThreadComb
         </span>
       )}
     </div>
   );
 }
+

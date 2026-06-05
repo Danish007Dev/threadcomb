@@ -9,7 +9,7 @@ interface InvoiceDraft {
   invoice_id: string;
   brand_name: string;
   amount_inr: number;
-  days_overdue: int;
+  days_overdue: number;
   urgency_score: number;
   recommended_tone: 'gentle' | 'firm' | 'final_notice';
   draft_text: string;
@@ -53,12 +53,12 @@ export function InvoiceTrackerWidget() {
 
   if (!batch || batch.drafts?.length === 0) {
     return (
-      <div className="tc-card p-6 flex items-center justify-between border-emerald-200 bg-emerald-50">
+      <div className="tc-card p-6 flex items-center justify-between border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-900/20">
         <div className="flex items-center gap-3">
-          <ReceiptText className="w-5 h-5 text-emerald-600" />
-          <h3 className="font-medium text-emerald-900">Invoice Tracker</h3>
+          <ReceiptText className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+          <h3 className="font-medium text-emerald-900 dark:text-emerald-200">Invoice Tracker</h3>
         </div>
-        <p className="text-sm text-emerald-700">All payments are on track.</p>
+        <p className="text-sm text-emerald-700 dark:text-emerald-400">All payments are on track.</p>
       </div>
     );
   }
@@ -70,9 +70,9 @@ export function InvoiceTrackerWidget() {
     <div className="tc-card p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <FileWarning className="w-5 h-5 text-rose-500" />
+          <FileWarning className="w-5 h-5 text-rose-500 dark:text-rose-400" />
           <h3 className="font-medium text-lg text-foreground">Invoice Tracker</h3>
-          <span className="bg-rose-100 text-rose-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+          <span className="bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400 text-xs font-semibold px-2 py-0.5 rounded-full">
             {batch.total_overdue} Overdue
           </span>
         </div>
@@ -83,29 +83,29 @@ export function InvoiceTrackerWidget() {
 
       <div className="space-y-3">
         {drafts.map((draft) => {
-          let toneColor = "bg-blue-100 text-blue-700";
-          if (draft.recommended_tone === "firm") toneColor = "bg-amber-100 text-amber-700";
-          if (draft.recommended_tone === "final_notice") toneColor = "bg-rose-100 text-rose-700";
+          let toneColor = "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400";
+          if (draft.recommended_tone === "firm") toneColor = "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400";
+          if (draft.recommended_tone === "final_notice") toneColor = "bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400";
 
           return (
-            <div key={draft.invoice_id} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:border-slate-300 transition-colors shadow-sm">
+            <div key={draft.invoice_id} className="flex items-center justify-between p-4 bg-white dark:bg-card border border-slate-200 dark:border-border rounded-xl hover:border-slate-300 dark:hover:border-slate-600 transition-colors shadow-sm dark:shadow-none">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-medium">
+                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 font-medium">
                   {draft.brand_name.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-medium text-slate-900">{draft.brand_name}</p>
+                  <p className="font-medium text-slate-900 dark:text-slate-200">{draft.brand_name}</p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-sm text-slate-500">₹{draft.amount_inr?.toLocaleString('en-IN')}</span>
-                    <span className="text-slate-300">•</span>
-                    <span className="text-sm text-rose-600 font-medium">{draft.days_overdue} days overdue</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">₹{draft.amount_inr?.toLocaleString('en-IN')}</span>
+                    <span className="text-slate-300 dark:text-slate-600">•</span>
+                    <span className="text-sm text-rose-600 dark:text-rose-400 font-medium">{draft.days_overdue} days overdue</span>
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right hidden sm:block">
-                  <p className="text-xs text-slate-400 mb-1">Urgency Score</p>
-                  <p className="text-sm font-semibold text-slate-700">{draft.urgency_score}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">Urgency Score</p>
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{draft.urgency_score}</p>
                 </div>
                 <div className={cn("px-3 py-1.5 rounded-md text-xs font-medium uppercase tracking-wider", toneColor)}>
                   {draft.recommended_tone.replace('_', ' ')}

@@ -38,6 +38,40 @@
 
     --radius: 0.5rem;
   }
+
+  .dark {
+    /* Very dark navy/charcoal for premium look */
+    --background: 220 20% 6%;
+    --foreground: 40 25% 95%;
+
+    --card: 220 20% 8%;
+    --card-foreground: 40 25% 95%;
+
+    --popover: 220 20% 8%;
+    --popover-foreground: 40 25% 95%;
+
+    --primary: 168 48% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 15%;
+    --secondary-foreground: 40 25% 95%;
+
+    --muted: 220 15% 15%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 220 15% 15%;
+    --accent-foreground: 135 25% 92%;
+
+    --destructive: 10 55% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --terracotta: 10 55% 52%;
+    --ochre: 35 65% 55%;
+
+    --border: 220 15% 15%;
+    --input: 220 15% 15%;
+    --ring: 168 48% 40%;
+  }
 }
 
 @layer base {

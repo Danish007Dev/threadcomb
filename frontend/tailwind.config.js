@@ -13,6 +13,7 @@ module.exports = {
         heading: ['var(--font-heading)', 'Outfit', 'system-ui', 'sans-serif'],
         body: ['var(--font-body)', 'Figtree', 'system-ui', 'sans-serif'],
         sans: ['var(--font-body)', 'Figtree', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'monospace'],
       },
       borderRadius: {
         lg: 'var(--radius)',
