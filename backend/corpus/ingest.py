@@ -34,9 +34,9 @@ BACKEND_DIR = HERE.parent.parent  # /app/backend
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-# Accept MONGODB_URI / MONGODB_DB_NAME spec names as fallbacks.
-if not os.environ.get("MONGO_URL") and os.environ.get("MONGODB_URI"):
-    os.environ["MONGO_URL"] = os.environ["MONGODB_URI"]
+# Accept MONGODB_URI (canonical) or MONGO_URL (legacy fallback).
+if not os.environ.get("MONGODB_URI") and os.environ.get("MONGO_URL"):
+    os.environ["MONGODB_URI"] = os.environ["MONGO_URL"]
 if not os.environ.get("DB_NAME") and os.environ.get("MONGODB_DB_NAME"):
     os.environ["DB_NAME"] = os.environ["MONGODB_DB_NAME"]
 
@@ -609,7 +609,7 @@ async def run_ingestion(
         logger.error("GEMINI_API_KEY is not set in backend/.env")
         return 1
 
-    client = AsyncIOMotorClient(settings.MONGO_URL)
+    client = AsyncIOMotorClient(settings.MONGODB_URI)
     db = client[settings.DB_NAME]
 
     try:

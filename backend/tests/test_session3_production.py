@@ -39,9 +39,9 @@ BACKEND_DIR = HERE.parent.parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-# Accept either MONGODB_URI or MONGO_URL
-if not os.environ.get("MONGO_URL") and os.environ.get("MONGODB_URI"):
-    os.environ["MONGO_URL"] = os.environ["MONGODB_URI"]
+# Accept either MONGODB_URI (canonical) or MONGO_URL (legacy fallback)
+if not os.environ.get("MONGODB_URI") and os.environ.get("MONGO_URL"):
+    os.environ["MONGODB_URI"] = os.environ["MONGO_URL"]
 
 from config import settings  # noqa: E402
 

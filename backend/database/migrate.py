@@ -18,9 +18,9 @@ BACKEND_DIR = HERE.parent.parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-# Accept either MONGODB_URI (spec) or MONGO_URL (platform default).
-if not os.environ.get("MONGO_URL") and os.environ.get("MONGODB_URI"):
-    os.environ["MONGO_URL"] = os.environ["MONGODB_URI"]
+# Accept either MONGODB_URI (canonical) or MONGO_URL (legacy fallback).
+if not os.environ.get("MONGODB_URI") and os.environ.get("MONGO_URL"):
+    os.environ["MONGODB_URI"] = os.environ["MONGO_URL"]
 if not os.environ.get("DB_NAME") and os.environ.get("MONGODB_DB_NAME"):
     os.environ["DB_NAME"] = os.environ["MONGODB_DB_NAME"]
 
@@ -48,7 +48,7 @@ async def migrate_niche_graph_v2(db=None) -> int:
     """
     own_client: Optional[AsyncIOMotorClient] = None
     if db is None:
-        own_client = AsyncIOMotorClient(settings.MONGO_URL)
+        own_client = AsyncIOMotorClient(settings.MONGODB_URI)
         db = own_client[settings.DB_NAME]
 
     try:

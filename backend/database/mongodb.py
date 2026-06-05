@@ -43,7 +43,7 @@ class MongoDBSingleton:
         
         if cls._client is None:
             cls._client = AsyncIOMotorClient(
-                settings.MONGO_URL,
+                settings.MONGODB_URI,
                 serverSelectionTimeoutMS=5000
             )
         return cls._client

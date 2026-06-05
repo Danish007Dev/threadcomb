@@ -3,63 +3,17 @@
 Wires up:
   - MongoDB collections + indexes at startup
   - niche_graph seed (idempotent — only seeds if empty)
-    - /api/auth/*       — Google OAuth + creator lifecycle
+  - /api/auth/*       — Google OAuth + creator lifecycle
   - /api/onboarding/* — 4-step creator onboarding
   - /api/health       — liveness + Mongo ping
+  - /webhooks/*       — Gmail Pub/Sub push (alias)
+  - /internal/*       — Cloud Scheduler endpoints
 """
+
 import logging
-print("DEBUG: Loaded logging")
-
-print("DEBUG: Importing FastAPI...")
-from fastapi import FastAPI, APIRouter
-from starlette.middleware.cors import CORSMiddleware
-
-print("DEBUG: Importing config...")
-from config import settings
-
-print("DEBUG: Importing MongoDB...")
-from database.mongodb import (
-    MongoDBSingleton,
-    ensure_collections,
-    create_indexes,
-)
-
-print("DEBUG: Importing seed...")
-from database.seed import seed_niche_graph
-
-print("DEBUG: Importing Auth Router...")
-from routers import auth as auth_router
-
-print("DEBUG: Importing Onboarding Router...")
-from routers import onboarding as onboarding_router
-
-print("DEBUG: Importing Health Router...")
-from routers import health as health_router
-
-print("DEBUG: Importing Ingestion Router...")
-from routers import ingestion as ingestion_router
-
-print("DEBUG: Importing SSE Router...")
-from routers import sse as sse_router
-
-print("DEBUG: Importing Audit Router...")
-from routers import audit as audit_router
-
-print("DEBUG: Importing Deals Router...")
-from routers import deals as deals_router
-
-print("DEBUG: ALL IMPORTS COMPLETE!")
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-logger = logging.getLogger(__name__)
-
 
 from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
-import logging
 
 from config import settings
 from database.mongodb import (
@@ -68,6 +22,7 @@ from database.mongodb import (
     create_indexes,
 )
 from database.seed import seed_niche_graph
+
 from routers import auth as auth_router
 from routers import onboarding as onboarding_router
 from routers import health as health_router
@@ -79,6 +34,8 @@ from routers import guardian as guardian_router
 from routers import orchestrator as orchestrator_router
 from routers import hitl as hitl_router
 from routers import settings as settings_router
+from routers import internal as internal_router
+from routers import webhooks as webhooks_router
 from workers import process_thread as process_thread_router
 
 logging.basicConfig(
@@ -118,6 +75,11 @@ async def root():
 app.include_router(api_router)
 app.include_router(process_thread_router.router)
 
+# Internal + Webhook routes: registered WITHOUT /api prefix.
+# Cloud Scheduler hits /internal/... and Pub/Sub hits /webhooks/...
+app.include_router(internal_router.router)
+app.include_router(webhooks_router.router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -127,49 +89,27 @@ app.add_middleware(
 )
 
 
-# @app.on_event("startup")
-# async def on_startup():
-#     db = MongoDBSingleton.get_db()
-#     logger.info("Connecting to MongoDB database: %s", db.name)
-#     await ensure_collections(db)
-#     await create_indexes(db)
-#     seeded = await seed_niche_graph(db)
-#     if seeded:
-#         logger.info("Seeded %d niche_graph documents at startup.", seeded)
-#     logger.info("ThreadComb backend ready.")
 @app.on_event("startup")
 async def on_startup():
-    print("DEBUG: Startup hook triggered! Attempting to connect to MongoDB...")
     try:
         db = MongoDBSingleton.get_db()
-        print(f"DEBUG: Successfully got DB object. Database name: {db.name}")
-        
-        print("DEBUG: Pinging MongoDB to ensure collections exist...")
+        logger.info("Connecting to MongoDB database: %s", db.name)
+
         await ensure_collections(db)
-        print("DEBUG: Collections verified!")
-        
-        print("DEBUG: Checking indexes...")
         await create_indexes(db)
-        print("DEBUG: Indexes verified!")
-        
-        print("DEBUG: Starting change streams...")
+
         from database.change_streams import start_change_streams
         await start_change_streams(db)
-        print("DEBUG: Change streams started!")
-        
-        print("DEBUG: Running seed function...")
+
         seeded = await seed_niche_graph(db)
         if seeded:
             logger.info("Seeded %d niche_graph documents at startup.", seeded)
-            
+
         logger.info("ThreadComb backend ready.")
-        print("DEBUG: STARTUP COMPLETELY FINISHED!")
-        
+
     except Exception as e:
-        print("\n" + "="*50)
-        print(f"🚨 MASSIVE DATABASE ERROR 🚨")
-        print(f"Details: {str(e)}")
-        print("="*50 + "\n")
+        logger.critical("Database startup failed: %s", e, exc_info=True)
+
 
 @app.on_event("shutdown")
 async def on_shutdown():

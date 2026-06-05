@@ -3,6 +3,10 @@
  *
  * All API calls go through the public backend URL defined in env. We always
  * include credentials so the Google OAuth session cookie is sent.
+ *
+ * BASE URL ENV VAR: process.env.NEXT_PUBLIC_BACKEND_URL
+ * Set this exact name in Vercel environment variables.
+ * Do not rename without updating Vercel simultaneously.
  */
 
 import type { Creator, Platform, Niche, FollowerBucket } from './types';

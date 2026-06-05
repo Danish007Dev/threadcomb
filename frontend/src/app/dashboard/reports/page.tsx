@@ -56,7 +56,7 @@ export default function ReportsPage() {
 
         // Fetch aggregate stats from API
         try {
-          const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+          const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000/api';
           const [dealsRes, invoicesRes] = await Promise.allSettled([
             fetch(`${API_BASE}/deals/inbound`, { credentials: 'include' }),
             fetch(`${API_BASE}/guardian/pending`, { credentials: 'include' }),

@@ -8,8 +8,8 @@ load_dotenv(ROOT_DIR / ".env")
 
 class Settings:
     # MongoDB
-    MONGO_URL: str = os.environ["MONGO_URL"]
-    DB_NAME: str = os.environ["DB_NAME"]
+    MONGODB_URI: str = os.environ["MONGODB_URI"]
+    DB_NAME: str = os.environ.get("DB_NAME", "threadcomb")
 
     # CORS
     CORS_ORIGINS: list = os.environ.get("CORS_ORIGINS", "*").split(",")

@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Outfit, Figtree } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -33,6 +35,8 @@ export default function RootLayout({
     <html lang="en" className={`${outfit.variable} ${figtree.variable}`}>
       <body className="min-h-dvh bg-background text-foreground antialiased">
         {children}
+        <Analytics />
+        <SpeedInsights />
         <Toaster richColors closeButton position="top-center" />
       </body>
     </html>

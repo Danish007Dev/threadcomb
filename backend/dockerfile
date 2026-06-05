@@ -1,0 +1,19 @@
+FROM python:3.11-slim
+
+# Fix 1a: WORKDIR must be /app, not /
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+# Non-root user for security
+RUN adduser --disabled-password --gecos "" --no-create-home appuser
+USER appuser
+
+ENV PORT=8080
+
+# Fix 1b: Entry point is server:app not backend.main:app
+# server.py lives at /app/server.py after COPY . .
+CMD uvicorn server:app --host 0.0.0.0 --port ${PORT} --workers 1

@@ -26,7 +26,7 @@ BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
 assert BASE_URL, "REACT_APP_BACKEND_URL must be set"
 API = f"{BASE_URL}/api"
 
-MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
+MONGODB_URI = os.environ.get("MONGODB_URI", os.environ.get("MONGO_URL", "mongodb://localhost:27017"))
 DB_NAME = os.environ.get("DB_NAME", "threadcomb")
 
 
@@ -41,7 +41,7 @@ def client():
 
 @pytest.fixture(scope="session")
 def mongo_db():
-    cli = MongoClient(MONGO_URL)
+    cli = MongoClient(MONGODB_URI)
     return cli[DB_NAME]
 
 

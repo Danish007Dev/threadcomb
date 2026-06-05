@@ -1,0 +1,13 @@
+.env
+.env.*
+__pycache__
+*.pyc
+*.pyo
+.git
+.gitignore
+corpus/data/
+backend/tests/
+node_modules/
+frontend/.next/
+sa.json
+.venv/
