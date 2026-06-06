@@ -26,17 +26,14 @@ def _verify_scheduler_request(request: Request) -> bool:
     In DEBUG mode: accepts all requests (for local testing).
     In production: verifies Authorization header contains a valid Google OIDC token.
     """
-    if settings.DEBUG:
-        return True
-
-    auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
-        return False
-
-    # For the hackathon: check that the token is present.
-    # For production hardening (Month 2): verify the token with Google's tokeninfo endpoint.
-    token = auth_header.replace("Bearer ", "").strip()
-    return len(token) > 20  # Basic sanity check
+    from services.oidc_auth import verify_oidc_token
+    from config import settings
+    
+    return verify_oidc_token(
+        request,
+        audience=settings.SCHEDULER_AUDIENCE,
+        endpoint_name="internal_scheduler_endpoint"
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

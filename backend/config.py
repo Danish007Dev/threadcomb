@@ -47,6 +47,10 @@ class Settings:
         "CLOUD_TASKS_QUEUE_NAME", "threadcomb-ingestion"
     )
 
+    # OIDC Verification Audiences
+    PUBSUB_AUDIENCE: str = os.environ.get("PUBSUB_AUDIENCE", "")
+    SCHEDULER_AUDIENCE: str = os.environ.get("SCHEDULER_AUDIENCE", "")
+
     # Debug mode — enables dev-only endpoints (trigger-direct, etc.)
     DEBUG: bool = os.environ.get("DEBUG", "true").lower() in {"1", "true", "yes"}
 

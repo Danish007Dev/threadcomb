@@ -26,5 +26,12 @@ async def gmail_pubsub_webhook(
     Always returns 200 — Pub/Sub retries on any non-200 response.
     Duplicate delivery is handled by idempotent ingestion logic.
     """
+    from services.oidc_auth import verify_oidc_token
+    from config import settings
+    from fastapi import HTTPException
+
+    if not verify_oidc_token(request, audience=settings.PUBSUB_AUDIENCE, endpoint_name="gmail_pubsub_webhook"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     from routers.ingestion import gmail_push_webhook as _gmail_push_webhook
     return await _gmail_push_webhook(request=request, background_tasks=background_tasks)

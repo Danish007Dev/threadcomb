@@ -189,39 +189,50 @@ async def extract_from_document(
         logger.warning("Empty content for %s. Skipping.", file_path.name)
         return None
 
-    if len(content) > MAX_CHARS_PER_DOCUMENT:
-        content = content[:MAX_CHARS_PER_DOCUMENT]
-        logger.info("Truncated %s to %d chars", file_path.name, MAX_CHARS_PER_DOCUMENT)
+    if file_path.suffix.lower() == ".json":
+        try:
+            payload = json.loads(content)
+            logger.info("Bypassing Gemini for pre-extracted JSON file: %s", file_path.name)
+        except json.JSONDecodeError as exc:
+            logger.error(
+                "Could not parse pre-extracted JSON from %s: %s",
+                file_path.name, exc,
+            )
+            return None
+    else:
+        if len(content) > MAX_CHARS_PER_DOCUMENT:
+            content = content[:MAX_CHARS_PER_DOCUMENT]
+            logger.info("Truncated %s to %d chars", file_path.name, MAX_CHARS_PER_DOCUMENT)
 
-    user_prompt = (
-        f"Source file: {file_path.name}\n"
-        f"Source type: {source_type}\n"
-        f"Document date: (extract from document if available)\n\n"
-        f"Document content:\n{content}\n\n"
-        f"Extract all rate benchmarks, brand signals, and contract clauses. "
-        f"Return ONLY the JSON object. No markdown, no prose."
-    )
-
-    try:
-        response_text = await gemini_client.send_text(
-            system_message=EXTRACTION_SYSTEM_PROMPT,
-            user_message=user_prompt,
-            model=EXTRACTION_MODEL,
+        user_prompt = (
+            f"Source file: {file_path.name}\n"
+            f"Source type: {source_type}\n"
+            f"Document date: (extract from document if available)\n\n"
+            f"Document content:\n{content}\n\n"
+            f"Extract all rate benchmarks, brand signals, and contract clauses. "
+            f"Return ONLY the JSON object. No markdown, no prose."
         )
-    except Exception as exc:
-        logger.error("Gemini call failed for %s: %s", file_path.name, exc)
-        return None
 
-    payload_text = _strip_code_fences(str(response_text))
+        try:
+            response_text = await gemini_client.send_text(
+                system_message=EXTRACTION_SYSTEM_PROMPT,
+                user_message=user_prompt,
+                model=EXTRACTION_MODEL,
+            )
+        except Exception as exc:
+            logger.error("Gemini call failed for %s: %s", file_path.name, exc)
+            return None
 
-    try:
-        payload = json.loads(payload_text)
-    except json.JSONDecodeError as exc:
-        logger.error(
-            "Could not parse JSON from %s response: %s\nRaw: %s",
-            file_path.name, exc, payload_text[:500],
-        )
-        return None
+        payload_text = _strip_code_fences(str(response_text))
+
+        try:
+            payload = json.loads(payload_text)
+        except json.JSONDecodeError as exc:
+            logger.error(
+                "Could not parse JSON from %s response: %s\nRaw: %s",
+                file_path.name, exc, payload_text[:500],
+            )
+            return None
 
     # Inject required source identity (model doesn't see source_file/source_type).
     payload["source_file"] = file_path.name

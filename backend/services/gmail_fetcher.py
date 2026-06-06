@@ -18,7 +18,7 @@ DEAL_SIGNAL_QUERY = (
     "(collaboration OR partnership OR collab OR sponsorship OR invoice OR contract OR "
     '"brand deal" OR "paid partnership" OR gifted OR gifting OR "media kit" OR '
     '"rate card" OR "per post" OR "per reel" OR "per video" OR deliverable OR '
-    "integrate OR integration) newer_than:180d"
+    "integrate OR integration) newer_than:180d -in:spam -in:trash"
 )
 
 THREAD_FETCH_RATE_LIMIT_SECONDS = 1.0
