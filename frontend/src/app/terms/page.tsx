@@ -85,7 +85,7 @@ export default function TermsOfServicePage() {
           <section className="space-y-4">
             <h2 className="text-2xl font-medium text-foreground">8. Contact Us</h2>
             <p>
-              If you have any questions about these Terms, please contact us at mdanish0852@gmail.com.
+              If you have any questions about these Terms, please contact us at <a href="mailto:contact@threadcomb.com" className="text-primary hover:underline">contact@threadcomb.com</a>.
             </p>
           </section>
         </div>

@@ -5,6 +5,7 @@ import { ThreadCombLogo } from '../../components/brand/Logo';
 import { LogIn, ShieldCheck, Sparkles, Inbox } from 'lucide-react';
 import { API_BASE } from '../../lib/api';
 import { ThemeToggle } from '../../components/ThemeToggle';
+import Link from 'next/link';
 
 /**
  * Login page — split layout: brand pitch on the left, abstract artwork on the right.
@@ -88,8 +89,12 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="text-xs text-muted-foreground pt-10">
-          © {new Date().getFullYear()} ThreadComb · threadcomb.com
+        <div className="text-xs text-muted-foreground pt-10 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <span>© {new Date().getFullYear()} ThreadComb</span>
+          <div className="flex items-center gap-3">
+            <Link href="/privacy" className="hover:text-foreground transition-colors underline underline-offset-2">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors underline underline-offset-2">Terms of Service</Link>
+          </div>
         </div>
       </div>
 
