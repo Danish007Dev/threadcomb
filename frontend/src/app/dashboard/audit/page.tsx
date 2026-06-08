@@ -140,7 +140,7 @@ export default function AuditPage() {
         <div>
           <h2 className="font-heading text-xl text-foreground mb-4">Findings</h2>
           <div className="space-y-4">
-            {report.findings.map((finding, idx) => {
+            {(report.findings || []).map((finding, idx) => {
               const config = SEVERITY_CONFIG[finding.severity] || SEVERITY_CONFIG.low;
               const FindingIcon = config.Icon;
               return (

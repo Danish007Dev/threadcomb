@@ -102,9 +102,9 @@ corpus/data/**/*.md
 
 sa.json
 docs/
+repo-scripts/
 
 # Ignored before deployment
 .pytest_cache/
 corpus/
-.emergent/
 test_reports/
