@@ -137,7 +137,7 @@ async def classify_thread_gate(
         f"Thread preview: {sanitised_thread.sanitised_text[:600]}"
     )
 
-    max_retries = getattr(settings, "GATE_MAX_RETRIES", 3)
+    max_retries = getattr(settings, "GATE_MAX_RETRIES", 6)
     parsed = None
     last_error = None
 
@@ -159,8 +159,8 @@ async def classify_thread_gate(
             is_rate_limited = "429" in error_str or "Too Many Requests" in error_str
 
             if is_rate_limited and attempt < max_retries:
-                # Exponential backoff: 5s, 15s, 45s
-                backoff = 5 * (3 ** attempt)
+                # Slower linear backoff for Free Tier (15 RPM limits): 10s, 20s, 30s, 40s...
+                backoff = 10 * (attempt + 1)
                 logger.warning(
                     "Gate 429 for %s (attempt %d/%d). Backing off %ds.",
                     thread_id, attempt + 1, max_retries, backoff

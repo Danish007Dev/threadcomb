@@ -77,7 +77,7 @@ class Settings:
         return 4.0 if self.GEMINI_TIER == "free" else 0.5
 
     # Max retries for Gemini 429 errors before giving up on a thread
-    GATE_MAX_RETRIES: int = int(os.environ.get("GATE_MAX_RETRIES", "3"))
+    GATE_MAX_RETRIES: int = int(os.environ.get("GATE_MAX_RETRIES", "10"))
 
 
 settings = Settings()

@@ -90,6 +90,7 @@ export default function DashboardPage() {
         .then(report => {
           setAuditReport(report);
           setDashboardState('complete');
+          localStorage.removeItem('threadcomb_active_job');
         })
         .catch(() => {
           setTimeout(() => {
@@ -98,6 +99,7 @@ export default function DashboardPage() {
                 .then(report => {
                   setAuditReport(report);
                   setDashboardState('complete');
+                  localStorage.removeItem('threadcomb_active_job');
                 })
                 .catch(() => {});
             }
@@ -110,6 +112,7 @@ export default function DashboardPage() {
     );
     if (failEvent && dashboardState === 'running') {
       setDashboardState('failed');
+      localStorage.removeItem('threadcomb_active_job');
     }
   }, [events, creator, dashboardState]);
 
@@ -135,8 +138,15 @@ export default function DashboardPage() {
               const report = await getAuditReport(me.creator_id);
               setAuditReport(report);
               setDashboardState('complete');
+              localStorage.removeItem('threadcomb_active_job');
             } catch {
-              setDashboardState('ready');
+              const activeJob = localStorage.getItem('threadcomb_active_job');
+              if (activeJob) {
+                setJobId(activeJob);
+                setDashboardState('running');
+              } else {
+                setDashboardState('ready');
+              }
             }
           } else {
             setDashboardState('no_gmail');
@@ -168,6 +178,7 @@ export default function DashboardPage() {
     try {
       const result = await startIngestion();
       setJobId(result.job_id);
+      localStorage.setItem('threadcomb_active_job', result.job_id);
       setDashboardState('running');
     } catch (err) {
       console.error('Failed to start audit:', err);
@@ -391,6 +402,7 @@ export default function DashboardPage() {
                 onRetry={() => {
                   setDashboardState('ready');
                   setJobId(null);
+                  localStorage.removeItem('threadcomb_active_job');
                 }}
               />
             </div>
