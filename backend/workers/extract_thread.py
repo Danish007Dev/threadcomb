@@ -29,7 +29,7 @@ from services.gemini_client import get_gemini_client_genai, GeminiClient
 logger = logging.getLogger(__name__)
 
 EXTRACTION_MODEL = GeminiClient.DEFAULT_MODEL
-EMBEDDING_MODEL = "gemini-embedding-2"
+EMBEDDING_MODEL = "gemini-embedding-2-preview"
 EMBEDDING_DIMENSIONS = 768
 
 # ── Extraction system prompt ──────────────────────────────────────────────────
@@ -106,6 +106,35 @@ async def run_extraction_worker(payload: dict):
         logger.warning(f"Worker received empty payload for thread {thread_id}")
         return
 
+    # DLQ Tracking (Step 1: Fetch or create task)
+    task = await db.ingestion_tasks.find_one({"thread_id": thread_id, "job_id": job_id})
+    if not task:
+        task = {
+            "thread_id": thread_id,
+            "creator_id": creator_id,
+            "job_id": job_id,
+            "status": "pending",
+            "retry_count": 0,
+            "max_retries": 3,
+            "raw_payload": payload,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        res = await db.ingestion_tasks.insert_one(task)
+        task_id = res.inserted_id
+        task["_id"] = task_id
+    else:
+        task_id = task["_id"]
+        if task.get("status") in ["completed", "dead_letter"]:
+            logger.info(f"Task {task_id} already completed or quarantined.")
+            return
+
+    # Advance state to processing
+    await db.ingestion_tasks.update_one(
+        {"_id": task_id},
+        {"$set": {"status": "processing", "updated_at": datetime.now(timezone.utc)}}
+    )
+
     try:
         # ── Step 1: Gemini Flash extraction ──────────────────────────────────
         extraction = await _run_deal_extraction(
@@ -139,12 +168,16 @@ async def run_extraction_worker(payload: dict):
         # ── Step 8: Update job progress ──────────────────────────────────────
         if job_id:
             await db.ingestion_jobs.update_one(
-                {"_id": ObjectId(job_id)},
+                {"_id": ObjectId(job_id), "thread_statuses.thread_id": thread_id},
                 {
                     "$inc": {"threads_extraction_complete": 1},
-                    "$set": {"updated_at": datetime.now(timezone.utc)}
+                    "$set": {
+                        "updated_at": datetime.now(timezone.utc),
+                        "thread_statuses.$.extraction_complete": True
+                    }
                 }
             )
+            await _check_and_trigger_audit(db, job_id, creator_id)
 
         # ── Step 9: Log agent action ──────────────────────────────────────────
         await write_with_classification(
@@ -167,6 +200,11 @@ async def run_extraction_worker(payload: dict):
             classification_tier=DataClassificationTier.PERSONAL_IDENTIFIABLE,
         )
 
+        # ── Finalize success state mark ───────────────────────────────────────
+        await db.ingestion_tasks.update_one(
+            {"_id": task_id},
+            {"$set": {"status": "completed", "updated_at": datetime.now(timezone.utc)}}
+        )
         logger.info(f"Extraction complete: thread={thread_id} brand={extraction.brand_name} deal_id={deal_id}")
 
         # ── Step 10 (Session 4): Trigger Deal Chief for automatic draft ───────
@@ -179,13 +217,41 @@ async def run_extraction_worker(payload: dict):
         except Exception as e:
             logger.warning(f"Deal Chief trigger failed (non-critical): {e}")
 
-    except Exception as e:
-        logger.error(f"Extraction worker error for thread {thread_id}: {e}", exc_info=True)
-        if job_id:
-            await db.ingestion_jobs.update_one(
-                {"_id": ObjectId(job_id)},
-                {"$inc": {"threads_errored": 1}, "$set": {"updated_at": datetime.now(timezone.utc)}}
+    except Exception as exc:
+        error_msg = str(exc)
+        current_retries = task.get("retry_count", 0) + 1
+        max_allowed = task.get("max_retries", 3)
+        error_entry = {"attempt": current_retries, "error": error_msg, "timestamp": datetime.now(timezone.utc)}
+
+        if current_retries >= max_allowed:
+            # === DEVIATION TO DEAD-LETTER QUEUE ===
+            await db.ingestion_tasks.update_one(
+                {"_id": task_id},
+                {
+                    "$set": {"status": "dead_letter", "last_error": error_msg, "updated_at": datetime.now(timezone.utc)},
+                    "$push": {"error_history": error_entry}
+                }
             )
+            logger.critical(f"Task {task_id} exceeded max retries. EVACUATED TO DLQ. Reason: {error_msg}")
+            
+            # Still update job error count
+            if job_id:
+                await db.ingestion_jobs.update_one(
+                    {"_id": ObjectId(job_id)},
+                    {"$inc": {"threads_errored": 1}, "$set": {"updated_at": datetime.now(timezone.utc)}}
+                )
+                await _check_and_trigger_audit(db, job_id, creator_id)
+        else:
+            # === SCHEDULE NEXT RETRY CYCLE ===
+            await db.ingestion_tasks.update_one(
+                {"_id": task_id},
+                {
+                    "$set": {"status": "pending", "retry_count": current_retries, "last_error": error_msg, "updated_at": datetime.now(timezone.utc)},
+                    "$push": {"error_history": error_entry}
+                }
+            )
+            logger.warning(f"Task {task_id} failed on attempt {current_retries}/{max_allowed}. Re-queued. Error: {error_msg}")
+            raise exc # Re-raise to trigger Cloud Tasks retry mechanisms
 
 
 async def _run_deal_extraction(
@@ -219,11 +285,14 @@ Full email thread:
             response_mime_type="application/json",
             response_schema=DealExtraction,
             temperature=0.0,
-            max_output_tokens=1500,
+            max_output_tokens=8192,
         )
     )
 
-    result = DealExtraction.model_validate_json(response.text)
+    if response.parsed:
+        result = response.parsed
+    else:
+        raise ValueError("Model completed successfully but output schema execution failed.")
     result.gmail_thread_id = thread_id
     result.sender_email = sender_email
     result.subject = subject
@@ -480,3 +549,29 @@ async def _queue_for_hitl(db, creator_id: str, thread_id: str, subject: str, sen
             {"_id": ObjectId(job_id)},
             {"$inc": {"threads_low_confidence": 1}, "$set": {"updated_at": datetime.now(timezone.utc)}}
         )
+        await _check_and_trigger_audit(db, job_id, creator_id)
+
+async def _check_and_trigger_audit(db, job_id: str, creator_id: str):
+    """Check if all threads are processed, and trigger audit if true."""
+    job = await db.ingestion_jobs.find_one({"_id": ObjectId(job_id)})
+    if not job:
+        return
+        
+    queued = job.get("threads_queued_for_extraction", 1)
+    processed = (
+        job.get("threads_extraction_complete", 0) +
+        job.get("threads_low_confidence", 0) +
+        job.get("threads_errored", 0)
+    )
+    
+    if processed >= queued:
+        # Prevent triggering multiple times if somehow we exceed
+        # We can check a flag
+        if not job.get("audit_generation_triggered"):
+            await db.ingestion_jobs.update_one(
+                {"_id": ObjectId(job_id)},
+                {"$set": {"audit_generation_triggered": True, "updated_at": datetime.now(timezone.utc)}}
+            )
+            from routers.audit import run_audit_generation
+            asyncio.create_task(run_audit_generation(creator_id=creator_id))
+            logger.info(f"All extractions complete for job {job_id}. Triggered audit generation.")

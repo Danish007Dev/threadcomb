@@ -33,9 +33,39 @@ async def start_ingestion(
     background_tasks: BackgroundTasks,
     current_creator=Depends(get_current_creator),
 ):
-    """Start a full ingestion job and return the job id."""
+    """Start a full ingestion job or resume an existing one and return the job id."""
     creator_id = current_creator["creator_id"]
     db = get_db_singleton()
+
+    # Check for an existing incomplete job
+    existing_job = await db.ingestion_jobs.find_one(
+        {
+            "creator_id": creator_id,
+            "status": {"$in": [
+                IngestionStatus.PENDING.value,
+                IngestionStatus.FETCHING.value,
+                IngestionStatus.SANITISING.value,
+                IngestionStatus.QUEUED_FOR_EXTRACTION.value,
+            ]}
+        },
+        sort=[("created_at", -1)]
+    )
+
+    if existing_job:
+        job_id = str(existing_job["_id"])
+        sse_channel = existing_job.get("sse_channel", f"ingestion:{creator_id}")
+        
+        # If it's queued for extraction and we are in DEBUG mode, trigger extraction
+        if existing_job["status"] == IngestionStatus.QUEUED_FOR_EXTRACTION.value and settings.DEBUG:
+            from routers.ingestion import trigger_dev_extraction_internal
+            # Simulate the trigger dev extraction request
+            asyncio.create_task(trigger_dev_extraction_internal(job_id, creator_id))
+        elif existing_job["status"] != IngestionStatus.QUEUED_FOR_EXTRACTION.value:
+            # Maybe the background task died? We could restart it, but for now just return the job_id
+            # so the frontend connects and we can see where it's stuck.
+            pass
+
+        return {"job_id": job_id, "sse_channel": sse_channel, "status": "resumed"}
 
     job = IngestionJob(
         creator_id=creator_id,
@@ -60,6 +90,73 @@ async def start_ingestion(
     )
 
     return {"job_id": job_id, "sse_channel": job.sse_channel, "status": "started"}
+
+async def trigger_dev_extraction_internal(job_id: str, creator_id: str):
+    """Internal helper to trigger dev extraction automatically."""
+    db = get_db_singleton()
+    try:
+        oid = ObjectId(job_id)
+    except Exception:
+        return
+    job = await db.ingestion_jobs.find_one({"_id": oid, "creator_id": creator_id})
+    if not job:
+        return
+    
+    from workers.extract_thread import run_extraction_worker
+    from services.gmail_auth import get_gmail_credentials
+    from services.gmail_fetcher import fetch_thread_content
+    from services.email_sanitiser import extract_text_from_gmail_thread, sanitise_thread
+
+    credentials = await get_gmail_credentials(creator_id)
+
+    triggered = 0
+    for ts in job.get("thread_statuses", []):
+        if ts.get("gate_decision") in ("deal_signal", "hindi_mixed") and not ts.get("extraction_complete"):
+            thread_id = ts.get("thread_id", "")
+            if not thread_id:
+                continue
+
+            raw_thread = await fetch_thread_content(credentials, thread_id)
+            if not raw_thread:
+                continue
+                
+            raw_extracted = extract_text_from_gmail_thread(raw_thread)
+            if not raw_extracted.get("combined_text"):
+                continue
+
+            sanitised = sanitise_thread(
+                thread_id=thread_id,
+                creator_id=creator_id,
+                raw_extracted=raw_extracted,
+            )
+
+            payload = {
+                "thread_id": thread_id,
+                "creator_id": creator_id,
+                "job_id": job_id,
+                "sanitised_text": sanitised.sanitised_text,
+                "sender_email": sanitised.sender_email,
+                "subject": sanitised.subject,
+                "hindi_mode": ts.get("hindi_mode", False),
+            }
+            asyncio.create_task(run_extraction_worker(payload))
+            triggered += 1
+
+    if triggered == 0:
+        # All threads are already processed (or none passed the gate). We must trigger the audit if it hasn't been.
+        queued = job.get("threads_queued_for_extraction", 1)
+        processed = (
+            job.get("threads_extraction_complete", 0) +
+            job.get("threads_low_confidence", 0) +
+            job.get("threads_errored", 0)
+        )
+        if processed >= queued and not job.get("audit_generation_triggered"):
+            await db.ingestion_jobs.update_one(
+                {"_id": ObjectId(job_id)},
+                {"$set": {"audit_generation_triggered": True, "updated_at": datetime.now(timezone.utc)}}
+            )
+            from routers.audit import run_audit_generation
+            asyncio.create_task(run_audit_generation(creator_id=creator_id))
 
 
 @router.post("/trigger-dev-extraction/{job_id}")
@@ -90,16 +187,40 @@ async def trigger_dev_extraction(
 
     # Directly call extraction on each queued thread_id
     from workers.extract_thread import run_extraction_worker
+    from services.gmail_auth import get_gmail_credentials
+    from services.gmail_fetcher import fetch_thread_content
+    from services.email_sanitiser import extract_text_from_gmail_thread, sanitise_thread
+
+    credentials = await get_gmail_credentials(creator_id)
+    
     triggered = 0
     for ts in job.get("thread_statuses", []):
-        if ts.get("queued_for_extraction") and not ts.get("extraction_complete"):
+        if ts.get("gate_decision") in ("deal_signal", "hindi_mixed") and not ts.get("extraction_complete"):
+            thread_id = ts.get("thread_id", "")
+            if not thread_id:
+                continue
+
+            raw_thread = await fetch_thread_content(credentials, thread_id)
+            if not raw_thread:
+                continue
+                
+            raw_extracted = extract_text_from_gmail_thread(raw_thread)
+            if not raw_extracted.get("combined_text"):
+                continue
+
+            sanitised = sanitise_thread(
+                thread_id=thread_id,
+                creator_id=creator_id,
+                raw_extracted=raw_extracted,
+            )
+
             payload = {
-                "thread_id": ts.get("thread_id", ""),
+                "thread_id": thread_id,
                 "creator_id": creator_id,
                 "job_id": job_id,
-                "sanitised_text": ts.get("sanitised_text", ""),
-                "sender_email": ts.get("sender_email", ""),
-                "subject": ts.get("subject", ""),
+                "sanitised_text": sanitised.sanitised_text,
+                "sender_email": sanitised.sender_email,
+                "subject": sanitised.subject,
                 "hindi_mode": ts.get("hindi_mode", False),
             }
             background_tasks.add_task(run_extraction_worker, payload=payload)
@@ -500,6 +621,12 @@ async def run_full_ingestion(creator_id: str, job_id: str) -> None:
                 creator_id,
                 job_doc.get("thread_statuses", []),
             )
+            
+        # ── Auto-trigger extraction in DEV mode ─────────────────────────
+        if settings.DEBUG and passed_gate > 0:
+            # Import here to avoid circular dependency
+            from routers.ingestion import trigger_dev_extraction_internal
+            asyncio.create_task(trigger_dev_extraction_internal(job_id, creator_id))
 
         # ── Voice profiling — runs async, not needed for audit ──────────
         if passed_gate > 0:

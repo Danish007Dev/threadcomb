@@ -23,7 +23,7 @@ import {
 
 import { Button } from '../../components/ui/button';
 import { ThreadCombLogo } from '../../components/brand/Logo';
-import { getMe, logout, startIngestion, getAuditReport } from '../../lib/api';
+import { getMe, logout, startIngestion, getAuditReport, API_BASE } from '../../lib/api';
 import type { Creator } from '../../lib/types';
 import type { AuditReport, AuditFinding } from '../../lib/api';
 import { cn } from '../../lib/utils';
@@ -142,8 +142,21 @@ export default function DashboardPage() {
             } catch {
               const activeJob = localStorage.getItem('threadcomb_active_job');
               if (activeJob) {
-                setJobId(activeJob);
-                setDashboardState('running');
+                // Verify the job still exists (handles DB wipe scenario)
+                fetch(`${API_BASE}/ingestion/status/${activeJob}`, { credentials: 'include' })
+                  .then(res => {
+                    if (res.ok) {
+                      setJobId(activeJob);
+                      setDashboardState('running');
+                    } else {
+                      localStorage.removeItem('threadcomb_active_job');
+                      setDashboardState('ready');
+                    }
+                  })
+                  .catch(() => {
+                    setJobId(activeJob);
+                    setDashboardState('running');
+                  });
               } else {
                 setDashboardState('ready');
               }

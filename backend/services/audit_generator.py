@@ -63,12 +63,25 @@ async def generate_audit_report(context: SynthesisContext) -> SynthesisReport:
                     response_mime_type="application/json",
                     response_schema=SynthesisReport,
                     temperature=0.1,
-                    max_output_tokens=3000,
+                    max_output_tokens=8192,
                 )
             )
-            report = SynthesisReport.model_validate_json(response.text)
-            logger.info(f"Audit synthesis completed with model: {model}")
-            return report
+            try:
+                raw_text = response.text.strip()
+                if raw_text.startswith("```json"):
+                    raw_text = raw_text[7:]
+                if raw_text.startswith("```"):
+                    raw_text = raw_text[3:]
+                if raw_text.endswith("```"):
+                    raw_text = raw_text[:-3]
+                raw_text = raw_text.strip()
+                
+                report = SynthesisReport.model_validate_json(raw_text)
+                logger.info(f"Audit synthesis completed with model: {model}")
+                return report
+            except Exception as e:
+                logger.error(f"Failed to parse JSON. Finish reason: {getattr(response.candidates[0], 'finish_reason', 'unknown')}. Raw text:\n{response.text}")
+                raise
         except Exception as e:
             if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
                 logger.warning(f"Quota exhausted for {model}, trying fallback...")

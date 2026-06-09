@@ -23,6 +23,21 @@ class IngestionStatus(str, Enum):
     PARTIAL = "partial"
 
 
+class IngestionTask(BaseModel):
+    """Represents a single thread extraction task for DLQ resilience."""
+    id: str = Field(alias="_id")
+    thread_id: str
+    creator_id: str
+    job_id: str
+    status: str = "pending"  # options: pending, processing, completed, dead_letter
+    retry_count: int = 0
+    max_retries: int = 3
+    last_error: Optional[str] = None
+    error_history: List[dict] = Field(default_factory=list)
+    raw_payload: dict = Field(default_factory=dict)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
 class IngestionTrigger(str, Enum):
     MANUAL = "manual"
     SCHEDULED_WEEKLY = "scheduled_weekly"

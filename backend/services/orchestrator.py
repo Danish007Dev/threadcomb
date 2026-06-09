@@ -150,19 +150,30 @@ async def orchestrate(
         try:
             from models.ingestion import IngestionJob, IngestionTrigger
             from bson import ObjectId
-            job = IngestionJob(
-                creator_id=creator_id,
-                trigger=IngestionTrigger.MANUAL,
-                sse_channel=creator_id,
-            )
-            job_doc = job.model_dump()
-            result = await db.ingestion_jobs.insert_one(job_doc)
-            real_job_id = str(result.inserted_id)
+            
+            incomplete_job = await db.ingestion_jobs.find_one({
+                "creator_id": creator_id,
+                "status": {"$in": ["pending", "fetching", "sanitising", "gate_classifying", "queued_for_extraction", "extraction_running"]}
+            }, sort=[("created_at", -1)])
 
-            from routers.ingestion import run_full_ingestion
-            asyncio.create_task(run_full_ingestion(creator_id=creator_id, job_id=real_job_id))
-            dispatched_agents.append("Email Audit")
-            yield {"event": "agent_dispatched", "agent": "dna_reader", "message": "Email Audit is running. Progress will appear on the dashboard."}
+            if incomplete_job:
+                real_job_id = str(incomplete_job["_id"])
+                dispatched_agents.append("Email Audit (Resumed)")
+                yield {"event": "agent_dispatched", "agent": "dna_reader", "message": "Email Audit is already running. Resuming connection...", "job_id": real_job_id}
+            else:
+                job = IngestionJob(
+                    creator_id=creator_id,
+                    trigger=IngestionTrigger.MANUAL,
+                    sse_channel=creator_id,
+                )
+                job_doc = job.model_dump()
+                result = await db.ingestion_jobs.insert_one(job_doc)
+                real_job_id = str(result.inserted_id)
+
+                from routers.ingestion import run_full_ingestion
+                asyncio.create_task(run_full_ingestion(creator_id=creator_id, job_id=real_job_id))
+                dispatched_agents.append("Email Audit")
+                yield {"event": "agent_dispatched", "agent": "dna_reader", "message": "Email Audit is running. Progress will appear on the dashboard.", "job_id": real_job_id}
         except Exception as e:
             logger.error(f"Orchestrator failed to start ingestion: {e}")
             yield {"event": "agent_error", "agent": "dna_reader", "message": f"Could not start audit: {str(e)[:100]}"}

@@ -68,10 +68,12 @@ Evaluate whether the draft matches this voice profile.
                 response_mime_type="application/json",
                 response_schema=VoiceComplianceResult,
                 temperature=0.0,
-                max_output_tokens=400,
+                max_output_tokens=2048,
             )
         )
-        return VoiceComplianceResult.model_validate_json(response.text)
+        if response.parsed:
+            return response.parsed
+        raise ValueError("Model completed successfully but output schema execution failed.")
 
     except Exception as e:
         logger.error(f"Voice compliance evaluation error: {e}")

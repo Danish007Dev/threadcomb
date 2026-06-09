@@ -142,11 +142,26 @@ def get_gemini_client_genai():
     if _genai_client is None:
         try:
             from google import genai
+            from google.genai import types
+            
+            retry_policy = types.HttpRetryOptions(
+                attempts=4,
+                initial_delay=1.5,
+                exp_base=2.0,
+                max_delay=30.0,
+                http_status_codes=[408, 429, 500, 502, 503, 504]
+            )
+            http_config = types.HttpOptions(
+                retry_options=retry_policy,
+                timeout=60 * 1000
+            )
+
             if settings.USE_VERTEX_AI:
                 _genai_client = genai.Client(
                     vertexai=True,
                     project=settings.GOOGLE_CLOUD_PROJECT,
                     location="us-central1",
+                    http_options=http_config
                 )
                 logger.info("Initialized google.genai.Client for Vertex AI (us-central1)")
             else:

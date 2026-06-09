@@ -17,7 +17,7 @@ class Settings:
     # Gemini
     GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
     GEMINI_EMBEDDING_MODEL: str = os.environ.get(
-        "GEMINI_EMBEDDING_MODEL", "gemini-embedding-2"
+        "GEMINI_EMBEDDING_MODEL", "text-embedding-004"
     )
     GEMINI_EMBEDDING_DIMENSIONS: int = int(
         os.environ.get("GEMINI_EMBEDDING_DIMENSIONS", "768")
@@ -69,7 +69,7 @@ class Settings:
         if override:
             return int(override)
         if self.DEBUG:
-            return 80
+            return 15
         return 50 if self.GEMINI_TIER == "free" else 600
 
     @property
