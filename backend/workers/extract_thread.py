@@ -24,10 +24,11 @@ from models.deal import DealExtraction
 from models.common import DataClassificationTier, AgentActionType, ActionResult
 from database.mongodb import get_db_singleton
 from services.mongodb_writer import write_with_classification
+from services.gemini_client import get_gemini_client_genai, GeminiClient
 
 logger = logging.getLogger(__name__)
 
-EXTRACTION_MODEL = "gemini-2.5-flash"
+EXTRACTION_MODEL = GeminiClient.DEFAULT_MODEL
 EMBEDDING_MODEL = "gemini-embedding-2"
 EMBEDDING_DIMENSIONS = 768
 

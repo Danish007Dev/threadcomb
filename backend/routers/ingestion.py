@@ -12,6 +12,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
+from services.gemini_client import GeminiClient
 from config import settings
 
 from database.ingestion_jobs import increment_job_counter, update_job_status
@@ -394,7 +395,7 @@ async def run_full_ingestion(creator_id: str, job_id: str) -> None:
                         "agent": "dna_reader",
                         "action_type": AgentActionType.HITL_QUEUED.value,
                         "execution": {
-                            "model_used": "gemini-2.5-flash-lite",
+                            "model_used": GeminiClient.DEFAULT_MODEL,
                             "tokens": gate_result.tokens_used,
                         },
                         "decision": {

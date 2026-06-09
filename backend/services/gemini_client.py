@@ -33,64 +33,14 @@ def _strip_code_fences(text: str) -> str:
 
 
 class GeminiClient:
-    """Process-wide singleton facade around the Gemini REST API."""
+    """Process-wide singleton facade around the Gemini API."""
 
-    DEFAULT_MODEL = "gemini-2.5-flash-lite"
+    DEFAULT_MODEL = "gemini-2.5-flash" if settings.USE_VERTEX_AI else "gemini-2.5-flash-lite"
     DEFAULT_EMBEDDING_MODEL = settings.GEMINI_EMBEDDING_MODEL
 
     def __init__(self, api_key: str = ""):
-        self.api_key = api_key or settings.GEMINI_API_KEY
-
-    def _generate(self, system_message: str, user_message: str, model: str) -> str:
-        if not self.api_key:
-            raise ValueError("GEMINI_API_KEY is not configured")
-
-        url = f"{GEMINI_API_BASE}/models/{model}:generateContent"
-        payload = {
-            "systemInstruction": {"parts": [{"text": system_message}]},
-            "contents": [{"role": "user", "parts": [{"text": user_message}]}],
-            "generationConfig": {
-                "temperature": 0,
-                "responseMimeType": "application/json",
-            },
-        }
-        response = requests.post(url, params={"key": self.api_key}, json=payload, timeout=60)
-        response.raise_for_status()
-        response_json = response.json()
-        candidates = response_json.get("candidates", [])
-        if not candidates:
-            raise ValueError("Gemini returned no candidates")
-        content = candidates[0].get("content", {})
-        parts = content.get("parts", [])
-        if not parts:
-            raise ValueError("Gemini returned empty content")
-        texts = [part.get("text", "") for part in parts if part.get("text")]
-        if not texts:
-            raise ValueError("Gemini returned no text payload")
-        return "\n".join(texts)
-
-    def _embed(self, text: str, model: str) -> List[float]:
-        if not self.api_key:
-            raise ValueError("GEMINI_API_KEY is not configured")
-
-        url = f"{GEMINI_API_BASE}/models/{model}:embedContent"
-        payload = {
-            "content": {"parts": [{"text": text}]},
-        }
-        response = requests.post(url, params={"key": self.api_key}, json=payload, timeout=60)
-        response.raise_for_status()
-        response_json = response.json()
-        embedding = response_json.get("embedding", {})
-        values = embedding.get("values") or []
-        if not values:
-            raise ValueError("Gemini returned no embedding values")
-
-        expected = settings.GEMINI_EMBEDDING_DIMENSIONS
-        if expected and len(values) != expected:
-            raise ValueError(
-                f"Gemini embedding dimension mismatch: got {len(values)}, expected {expected}"
-            )
-        return [float(value) for value in values]
+        # Compatibility signature, no longer needed
+        pass
 
     async def send_text(
         self,
@@ -100,7 +50,19 @@ class GeminiClient:
         session_id: Optional[str] = None,
     ) -> str:
         """Send a one-shot request and return the model's response as a string."""
-        return await asyncio.to_thread(self._generate, system_message, user_message, model)
+        from google.genai import types
+        client = get_gemini_client_genai()
+        response = await client.aio.models.generate_content(
+            model=model,
+            contents=user_message,
+            config=types.GenerateContentConfig(
+                system_instruction=system_message,
+                temperature=0,
+            )
+        )
+        if not response.text:
+            raise ValueError("Gemini returned no text payload")
+        return response.text
 
     async def embed_text(
         self,
@@ -108,11 +70,16 @@ class GeminiClient:
         model: str = DEFAULT_EMBEDDING_MODEL,
         normalize: Optional[bool] = None,
     ) -> List[float]:
-        """Return an embedding vector for a text input.
-
-        Normalization defaults to the GEMINI_EMBEDDING_NORMALIZE setting.
-        """
-        vector = await asyncio.to_thread(self._embed, text, model)
+        """Return an embedding vector for a text input."""
+        client = get_gemini_client_genai()
+        response = await client.aio.models.embed_content(
+            model=model,
+            contents=text,
+        )
+        if not response.embeddings or not response.embeddings[0].values:
+            raise ValueError("Gemini returned no embedding values")
+            
+        vector = response.embeddings[0].values
         should_normalize = (
             settings.GEMINI_EMBEDDING_NORMALIZE if normalize is None else normalize
         )
@@ -127,13 +94,21 @@ class GeminiClient:
         model: str = DEFAULT_MODEL,
         session_id: Optional[str] = None,
     ) -> dict:
-        """Send a request, parse the response as JSON, raise on failure.
-
-        Strips ``` fences first because Gemini still emits them occasionally
-        despite "JSON only" instructions.
-        """
-        raw = await self.send_text(system_message, user_message, model, session_id)
-        payload_text = _strip_code_fences(raw)
+        """Send a request, parse the response as JSON, raise on failure."""
+        from google.genai import types
+        client = get_gemini_client_genai()
+        response = await client.aio.models.generate_content(
+            model=model,
+            contents=user_message,
+            config=types.GenerateContentConfig(
+                system_instruction=system_message,
+                temperature=0,
+                response_mime_type="application/json",
+            )
+        )
+        if not response.text:
+            raise ValueError("Gemini returned no text payload")
+        payload_text = _strip_code_fences(response.text)
         return json.loads(payload_text)
 
 
@@ -162,20 +137,24 @@ _genai_client = None
 
 
 def get_gemini_client_genai():
-    """Return a google.genai.Client initialized with GEMINI_API_KEY.
-
-    This is separate from the old GeminiClient singleton — it uses the new
-    google-genai SDK which supports response_schema with Pydantic models.
-    """
+    """Return a google.genai.Client initialized for Vertex AI or AI Studio."""
     global _genai_client
     if _genai_client is None:
         try:
             from google import genai
-            api_key = settings.GEMINI_API_KEY
-            if not api_key:
-                raise ValueError("GEMINI_API_KEY is not configured")
-            _genai_client = genai.Client(api_key=api_key)
-            logger.info("Initialized google.genai.Client for structured output")
+            if settings.USE_VERTEX_AI:
+                _genai_client = genai.Client(
+                    vertexai=True,
+                    project=settings.GOOGLE_CLOUD_PROJECT,
+                    location="us-central1",
+                )
+                logger.info("Initialized google.genai.Client for Vertex AI (us-central1)")
+            else:
+                api_key = settings.GEMINI_API_KEY
+                if not api_key:
+                    raise ValueError("GEMINI_API_KEY is not configured")
+                _genai_client = genai.Client(api_key=api_key)
+                logger.info("Initialized google.genai.Client for AI Studio")
         except ImportError:
             raise ImportError(
                 "google-genai package is required. Install with: pip install google-genai"

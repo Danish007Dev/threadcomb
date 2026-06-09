@@ -22,10 +22,11 @@ from models.ingestion import (
     SanitisedThread,
 )
 from services.email_sanitiser import is_deterministic_spam, MIN_TOKEN_THRESHOLD
+from services.gemini_client import GeminiClient
 
 logger = logging.getLogger(__name__)
 
-GATE_MODEL = "gemini-2.5-flash-lite"
+GATE_MODEL = GeminiClient.DEFAULT_MODEL
 HITL_THRESHOLD = 0.60
 
 GATE_SYSTEM_PROMPT = """You are a binary classifier for email threads sent to content creators in India.

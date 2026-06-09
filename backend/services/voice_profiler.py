@@ -48,8 +48,10 @@ async def extract_voice_profile_brand(outbound_emails: List[str]) -> Optional[di
         logger.info(f"Insufficient outbound emails ({len(outbound_emails)}) for voice profiling. Skipping.")
         return None
 
-    from services.gemini_client import get_gemini_client_genai
+    from services.gemini_client import get_gemini_client_genai, GeminiClient
     from google.genai import types
+
+    VOICE_PROFILER_MODEL = GeminiClient.DEFAULT_MODEL
 
     client = get_gemini_client_genai()
 

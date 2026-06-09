@@ -10,10 +10,11 @@ import json
 import logging
 from typing import AsyncGenerator
 from datetime import datetime
+from services.gemini_client import get_gemini_client_genai, GeminiClient
 
 logger = logging.getLogger(__name__)
 
-ROUTER_MODEL = "gemini-2.5-flash-lite"
+ROUTER_MODEL = GeminiClient.DEFAULT_MODEL
 
 # Deterministic routing table — covers 90% of cases without an LLM call
 ROUTING_RULES = {

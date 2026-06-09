@@ -60,13 +60,16 @@ class Settings:
 
     # Gemini rate limiting — controls ingestion pipeline throttling
     # "free" = 15 RPM (default), "paid" = 1000+ RPM
-    GEMINI_TIER: str = os.environ.get("GEMINI_TIER", "free")
+    USE_VERTEX_AI: bool = os.environ.get("USE_VERTEX_AI", "false").lower() in {"1", "true", "yes"}
+    GEMINI_TIER: str = "paid" if USE_VERTEX_AI else os.environ.get("GEMINI_TIER", "free")
 
     @property
     def MAX_INGESTION_THREADS(self) -> int:
         override = os.environ.get("MAX_INGESTION_THREADS")
         if override:
             return int(override)
+        if self.DEBUG:
+            return 80
         return 50 if self.GEMINI_TIER == "free" else 600
 
     @property
@@ -74,7 +77,7 @@ class Settings:
         override = os.environ.get("GATE_SLEEP_SECONDS")
         if override:
             return float(override)
-        return 4.0 if self.GEMINI_TIER == "free" else 0.5
+        return 4.0 if self.GEMINI_TIER == "free" else 0.0
 
     # Max retries for Gemini 429 errors before giving up on a thread
     GATE_MAX_RETRIES: int = int(os.environ.get("GATE_MAX_RETRIES", "10"))

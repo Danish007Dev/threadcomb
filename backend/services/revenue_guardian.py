@@ -8,11 +8,12 @@ from google.genai import types
 
 from models.invoice import InvoiceFollowUpDraft, BatchFollowUpResult
 from models.common import DataClassificationTier, AgentActionType, ActionResult
+from services.gemini_client import get_gemini_client_genai, GeminiClient
 from services.mongodb_writer import write_with_classification
 
 logger = logging.getLogger(__name__)
 
-FOLLOWUP_MODEL = "gemini-2.5-flash"
+FOLLOWUP_MODEL = GeminiClient.DEFAULT_MODEL
 
 # Tone-specific system prompts — each instilled with a different energy level
 TONE_PROMPTS = {
