@@ -20,6 +20,12 @@ export interface IngestionEvent {
   deal_count?: number;
   // Audit complete (Session 3)
   pdf_url?: string;
+  // Deals (Session 4)
+  brand_domain?: string;
+  subject?: string;
+  action?: string;
+  deal_id?: string;
+  brand_name?: string;
 }
 
 export interface IngestionStatusSnapshot {

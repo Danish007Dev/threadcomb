@@ -159,6 +159,13 @@ async def run_extraction_worker(payload: dict):
         # ── Step 5: Write deal document to MongoDB ────────────────────────────
         deal_id = await _write_deal(db, creator_id, brand_id, extraction, embedding_vector, thread_id, date_range_start)
 
+        from services.sse_manager import publish_sse_event
+        await publish_sse_event(creator_id, {
+            "event": "extraction_complete",
+            "deal_id": deal_id,
+            "message": "Brand details extracted. Generating reply draft..."
+        })
+
         # ── Step 6: Update skills_map preference nodes ────────────────────────
         await _update_skills_map(db, creator_id, extraction, deal_id)
 

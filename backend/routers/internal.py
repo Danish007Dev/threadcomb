@@ -93,14 +93,14 @@ async def _renew_all_gmail_watches():
                 {"_id": creator["_id"]},
                 {"$set": {
                     "gmail_watch.history_id": watch_data["history_id"],
-                    "gmail_watch.expiry": watch_data["expiry"],
+                    "gmail_watch.expiry": watch_data["expiration"],
                     "gmail_watch.active": True,
-                    "gmail_watch.topic_name": watch_data["topic_name"],
+                    "gmail_watch.topic_name": watch_data.get("topic_name", "projects/threadcomb-dev/topics/threadcomb-gmail-notifications"),
                     "updated_at": datetime.utcnow(),
                 }}
             )
             renewed += 1
-            logger.info(f"Gmail watch renewed for creator {creator_id}. Expires: {watch_data['expiry']}")
+            logger.info(f"Gmail watch renewed for creator {creator_id}. Expires: {watch_data['expiration']}")
 
         except Exception as e:
             failed += 1

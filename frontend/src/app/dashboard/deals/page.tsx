@@ -16,6 +16,7 @@ import type { InboundDeal } from '../../../lib/api';
 import { DealCard } from '../components/DealCard';
 import { ShadowDraftModal } from '../components/ShadowDraftModal';
 import { ThreadCombLogo } from '../../../components/brand/Logo';
+import { useIngestionStatus } from '../../../hooks/useIngestionStatus';
 
 export default function DealsPage() {
   const router = useRouter();
@@ -24,7 +25,9 @@ export default function DealsPage() {
   const [loading, setLoading] = useState(true);
   const [generatingDealId, setGeneratingDealId] = useState<string | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<InboundDeal | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const { events } = useIngestionStatus(creator?.creator_id);
 
   const fetchDeals = useCallback(async () => {
     try {
@@ -60,6 +63,22 @@ export default function DealsPage() {
       return () => clearTimeout(timer);
     }
   }, [toast]);
+
+  // Listen for realtime deals
+  useEffect(() => {
+    if (events.length === 0) return;
+    const latest = events[events.length - 1];
+    if (latest.event === 'new_deal_detected') {
+      setToast({ message: latest.message || 'New brand deal detected! Extracting...', type: 'info' });
+    } else if (latest.event === 'extraction_complete') {
+      setToast({ message: latest.message || 'Brand details extracted. Generating reply draft...', type: 'info' });
+      fetchDeals();
+    } else if (latest.event === 'draft_ready') {
+      setToast({ message: latest.message || 'New reply draft is ready.', type: 'success' });
+      fetchDeals();
+      setGeneratingDealId(null);
+    }
+  }, [events, fetchDeals]);
 
   const handleGenerateDraft = async (dealId: string) => {
     setGeneratingDealId(dealId);
@@ -180,7 +199,9 @@ export default function DealsPage() {
             'fixed bottom-6 right-6 z-50 max-w-sm px-4 py-3 rounded-xl shadow-lg border text-sm font-medium animate-in slide-in-from-bottom-4 fade-in duration-300',
             toast.type === 'success'
               ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
-              : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400',
+              : toast.type === 'error'
+              ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400'
+              : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400'
           )}
           data-testid="deals-toast"
         >

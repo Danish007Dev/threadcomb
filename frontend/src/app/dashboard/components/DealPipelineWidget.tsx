@@ -5,11 +5,48 @@ import { useRouter } from 'next/navigation';
 import { Handshake, Loader2, PenTool, CheckCircle, Clock } from 'lucide-react';
 import { getInboundDeals } from '../../../lib/api';
 import type { InboundDeal } from '../../../lib/api';
+import { useIngestionStatus } from '../../../hooks/useIngestionStatus';
 
-export function DealPipelineWidget() {
+export function DealPipelineWidget({ creatorId }: { creatorId?: string }) {
   const router = useRouter();
   const [deals, setDeals] = useState<InboundDeal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const { events } = useIngestionStatus(creatorId);
+
+  const fetchDeals = async () => {
+    try {
+      const data = await getInboundDeals();
+      setDeals(data);
+    } catch {
+      // Silently ignore
+    }
+  };
+
+  // Auto-hide toast
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  // Listen for realtime deals
+  useEffect(() => {
+    if (events.length === 0) return;
+    const latest = events[events.length - 1];
+    if (latest.event === 'new_deal_detected') {
+      setToast({ message: latest.message || 'New brand deal detected! Extracting...', type: 'info' });
+      // We don't fetchDeals here yet, because the deal hasn't been saved to DB.
+    } else if (latest.event === 'extraction_complete') {
+      setToast({ message: latest.message || 'Brand details extracted. Generating reply draft...', type: 'info' });
+      fetchDeals(); // Now it exists in the DB, it will show as Unanswered
+    } else if (latest.event === 'draft_ready') {
+      setToast({ message: latest.message || 'New reply draft is ready.', type: 'success' });
+      fetchDeals(); // Now it has a draft, it moves to Pending Approval
+    }
+  }, [events]);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,6 +81,16 @@ export function DealPipelineWidget() {
         <Handshake className="w-5 h-5 text-primary" />
         <h3 className="font-medium text-lg text-foreground">Deal Pipeline</h3>
       </div>
+
+      {toast && (
+        <div className={`mb-4 p-3 rounded-lg text-sm font-medium border ${
+          toast.type === 'success' 
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-400' 
+            : 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-400'
+        }`}>
+          {toast.message}
+        </div>
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Unanswered */}
