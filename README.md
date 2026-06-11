@@ -639,8 +639,7 @@ GOOGLE_CLOUD_PROJECT=your-project-id
 
 | Name | Role | Contact |
 |------|------|---------|
-| Mohd Danish | Founder & Builder | [LinkedIn](https://www.linkedin.com/in/mohd-danish-007-dev/) [GitHub](https://github.com/Danish007Dev/
-) |
+| Mohd Danish | Founder & Builder | [LinkedIn](https://www.linkedin.com/in/mohd-danish-007-dev/) [GitHub](https://github.com/Danish007Dev/) |
 
 ---
 
